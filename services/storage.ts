@@ -191,7 +191,7 @@ export const StorageService = {
 
   // --- HELPERS FOR DETAILED CONTEXT ---
   getDetailedLastMatches: (teamName: string, limit: number = 5): string => {
-      const matches = localStorage.getItem(KEYS.SEASON_MATCHES) ? JSON.parse(localStorage.getItem(KEYS.SEASON_MATCHES) || '[]') : [] as FootballDataMatch[];
+      const matches: FootballDataMatch[] = localStorage.getItem(KEYS.SEASON_MATCHES) ? JSON.parse(localStorage.getItem(KEYS.SEASON_MATCHES) || '[]') : [];
       if (matches.length === 0) return "Dati storico partite non presenti (Eseguire Sync).";
 
       const normTeam = normalizeTeamName(teamName);
@@ -224,8 +224,8 @@ export const StorageService = {
   // --- CONTEXT GENERATION FOR GEMINI ---
   getMatchContext: (homeTeamName: string, awayTeamName: string): string => {
     const standings = StorageService.getStandings();
-    const matches = localStorage.getItem(KEYS.SEASON_MATCHES) ? JSON.parse(localStorage.getItem(KEYS.SEASON_MATCHES) || '[]') : [] as FootballDataMatch[];
-    const scorers = localStorage.getItem(KEYS.SCORERS) ? JSON.parse(localStorage.getItem(KEYS.SCORERS) || '[]') : [] as TopScorer[];
+    const matches: FootballDataMatch[] = localStorage.getItem(KEYS.SEASON_MATCHES) ? JSON.parse(localStorage.getItem(KEYS.SEASON_MATCHES) || '[]') : [];
+    const scorers: TopScorer[] = localStorage.getItem(KEYS.SCORERS) ? JSON.parse(localStorage.getItem(KEYS.SCORERS) || '[]') : [];
 
     const normHome = normalizeTeamName(homeTeamName);
     const normAway = normalizeTeamName(awayTeamName);
@@ -288,7 +288,7 @@ export const StorageService = {
   },
 
   getH2HMatches: (homeTeamName: string, awayTeamName: string): FootballDataMatch[] => {
-    const matches = localStorage.getItem(KEYS.SEASON_MATCHES) ? JSON.parse(localStorage.getItem(KEYS.SEASON_MATCHES) || '[]') : [] as FootballDataMatch[];
+    const matches: FootballDataMatch[] = localStorage.getItem(KEYS.SEASON_MATCHES) ? JSON.parse(localStorage.getItem(KEYS.SEASON_MATCHES) || '[]') : [];
     const normHome = normalizeTeamName(homeTeamName);
     const normAway = normalizeTeamName(awayTeamName);
 
