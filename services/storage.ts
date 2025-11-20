@@ -1,5 +1,5 @@
 
-import { BetRecord, UserStats, LeagueStanding, FootballDataMatch, TopScorer } from '../types';
+import { BetRecord, UserStats, LeagueStanding, FootballDataMatch, TopScorer, TeamSquad } from '../types';
 import { NewsArticle } from './news';
 
 const KEYS = {
@@ -12,6 +12,7 @@ const KEYS = {
   STANDINGS: 'rz_standings',
   SEASON_MATCHES: 'rz_season_matches',
   SCORERS: 'rz_scorers',
+  SQUADS: 'rz_squads', // NEW KEY
   LAST_FOOTBALL_SYNC: 'rz_last_football_sync',
   LAST_BACKUP_DATE: 'rz_last_backup_date',
   BANKROLL: 'rz_bankroll',
@@ -164,10 +165,11 @@ export const StorageService = {
   },
 
   // --- FOOTBALL DATA MANAGEMENT ---
-  saveFootballData: (standings: LeagueStanding[], matches: FootballDataMatch[], scorers: TopScorer[]) => {
+  saveFootballData: (standings: LeagueStanding[], matches: FootballDataMatch[], scorers: TopScorer[], squads?: TeamSquad[]) => {
     localStorage.setItem(KEYS.STANDINGS, JSON.stringify(standings));
     localStorage.setItem(KEYS.SEASON_MATCHES, JSON.stringify(matches));
     localStorage.setItem(KEYS.SCORERS, JSON.stringify(scorers));
+    if (squads) localStorage.setItem(KEYS.SQUADS, JSON.stringify(squads));
     localStorage.setItem(KEYS.LAST_FOOTBALL_SYNC, Date.now().toString());
   },
 
@@ -175,11 +177,13 @@ export const StorageService = {
     const standings = localStorage.getItem(KEYS.STANDINGS);
     const matches = localStorage.getItem(KEYS.SEASON_MATCHES);
     const scorers = localStorage.getItem(KEYS.SCORERS);
+    const squads = localStorage.getItem(KEYS.SQUADS);
     const lastSync = localStorage.getItem(KEYS.LAST_FOOTBALL_SYNC);
     return {
       standings: standings ? JSON.parse(standings) : [],
       matches: matches ? JSON.parse(matches) : [],
       scorers: scorers ? JSON.parse(scorers) : [],
+      squads: squads ? JSON.parse(squads) : [],
       lastSync: lastSync ? parseInt(lastSync) : 0
     };
   },
@@ -187,6 +191,11 @@ export const StorageService = {
   getStandings: (): LeagueStanding[] => {
     const data = localStorage.getItem(KEYS.STANDINGS);
     return data ? JSON.parse(data) : [];
+  },
+  
+  getSquads: (): TeamSquad[] => {
+      const data = localStorage.getItem(KEYS.SQUADS);
+      return data ? JSON.parse(data) : [];
   },
 
   // --- HELPERS FOR DETAILED CONTEXT ---
@@ -226,6 +235,8 @@ export const StorageService = {
     const standings = StorageService.getStandings();
     const matches: FootballDataMatch[] = localStorage.getItem(KEYS.SEASON_MATCHES) ? JSON.parse(localStorage.getItem(KEYS.SEASON_MATCHES) || '[]') : [];
     const scorers: TopScorer[] = localStorage.getItem(KEYS.SCORERS) ? JSON.parse(localStorage.getItem(KEYS.SCORERS) || '[]') : [];
+    const squads: TeamSquad[] = localStorage.getItem(KEYS.SQUADS) ? JSON.parse(localStorage.getItem(KEYS.SQUADS) || '[]') : [];
+    const news = StorageService.getNews();
 
     const normHome = normalizeTeamName(homeTeamName);
     const normAway = normalizeTeamName(awayTeamName);
@@ -259,7 +270,77 @@ export const StorageService = {
       context += `SQUADRA OSPITE: ${awayTeamName} - Dati classifica non trovati (Verificare Sync).\n\n`;
     }
 
-    // 2. H2H Stagionali
+    // 2. SQUADS / ROSE & SCORERS INTEGRATION
+    const findSquad = (normName: string) => squads.find(t => {
+        const sNorm = normalizeTeamName(t.name);
+        return sNorm === normName || sNorm.includes(normName) || normName.includes(sNorm);
+    });
+
+    // Helper to get exact goals for a player from the scorers list
+    const getPlayerGoals = (playerName: string, teamName: string) => {
+        const normP = normalizeTeamName(playerName);
+        const normT = normalizeTeamName(teamName);
+        
+        // Find scorer entry that matches player AND team (to avoid duplicates or wrong attributions)
+        const entry = scorers.find(s => {
+            const sP = normalizeTeamName(s.player.name);
+            const sT = normalizeTeamName(s.team.name);
+            
+            const teamMatch = sT.includes(normT) || normT.includes(sT);
+            if (!teamMatch) return false;
+            
+            return sP.includes(normP) || normP.includes(sP);
+        });
+        return entry ? entry.goals : 0;
+    };
+
+    const homeSquad = findSquad(normHome);
+    const awaySquad = findSquad(normAway);
+
+    if (homeSquad && homeSquad.squad) {
+        const players = homeSquad.squad.slice(0, 25).map(p => {
+             const goals = getPlayerGoals(p.name, homeTeamName);
+             const scorerTag = goals > 0 ? ` [${goals} GOL]` : '';
+             return `${p.name} (${p.position})${scorerTag}`;
+        }).join(', ');
+        context += `ROSA COMPLETA ${homeTeamName} (con gol segnati):\n${players}\nAllenatore: ${homeSquad.coach?.name || 'N/D'}\n\n`;
+    }
+
+    if (awaySquad && awaySquad.squad) {
+        const players = awaySquad.squad.slice(0, 25).map(p => {
+             const goals = getPlayerGoals(p.name, awayTeamName);
+             const scorerTag = goals > 0 ? ` [${goals} GOL]` : '';
+             return `${p.name} (${p.position})${scorerTag}`;
+        }).join(', ');
+        context += `ROSA COMPLETA ${awayTeamName} (con gol segnati):\n${players}\nAllenatore: ${awaySquad.coach?.name || 'N/D'}\n\n`;
+    }
+
+    // 3. SPECIFIC TEAM TOP SCORERS LIST
+    const getTeamTopScorers = (teamName: string) => {
+        const normT = normalizeTeamName(teamName);
+        return scorers.filter(s => {
+            const sT = normalizeTeamName(s.team.name);
+            return sT.includes(normT) || normT.includes(sT);
+        }).sort((a,b) => b.goals - a.goals).slice(0, 3);
+    };
+
+    const homeTopScorers = getTeamTopScorers(homeTeamName);
+    const awayTopScorers = getTeamTopScorers(awayTeamName);
+
+    if (homeTopScorers.length > 0) {
+        context += `TOP MARCATORI ${homeTeamName}:\n`;
+        homeTopScorers.forEach(s => context += `- ${s.player.name}: ${s.goals} Gol\n`);
+        context += `\n`;
+    }
+    
+    if (awayTopScorers.length > 0) {
+        context += `TOP MARCATORI ${awayTeamName}:\n`;
+        awayTopScorers.forEach(s => context += `- ${s.player.name}: ${s.goals} Gol\n`);
+        context += `\n`;
+    }
+
+
+    // 4. H2H Stagionali
     const h2h = matches.filter(m => {
       const mHome = normalizeTeamName(m.homeTeam.name);
       const mAway = normalizeTeamName(m.awayTeam.name);
@@ -276,12 +357,31 @@ export const StorageService = {
       context += `Nessun precedente diretto registrato in questa stagione.\n`;
     }
     
-    // 3. Top Scorers
-    if (scorers.length > 0) {
-      context += `\nTOP MARCATORI LEGA (Gol Segnati):\n`;
-      scorers.slice(0, 5).forEach(s => {
-        context += `- ${s.player.name} (${s.team.name}): ${s.goals}\n`;
-      });
+    // 5. Medical Report & Tactical News (Mining)
+    const medKeywords = ['infortunio', 'squalifica', 'out', 'indisponibile', 'non convocato', 'salta', 'stop', 'lesione', 'problema muscolare'];
+    
+    const filterNews = (normTeam: string) => news.filter(n => {
+         const txt = (n.title + n.description).toLowerCase();
+         // Basic check if news talks about the team
+         if (!txt.includes(normTeam)) return false;
+         // Check for medical keywords
+         return medKeywords.some(k => txt.includes(k));
+    });
+
+    const homeNews = filterNews(normHome);
+    const awayNews = filterNews(normAway);
+
+    if (homeNews.length > 0 || awayNews.length > 0) {
+        context += `\n=== REPORT MEDICO & NEWS TATTICHE ===\n`;
+        if(homeNews.length > 0) {
+            context += `\nNOTIZIE ${homeTeamName}:\n`;
+            homeNews.forEach(n => context += `- ${n.title} (${n.publishedAt.split('T')[0]})\n`);
+        }
+        if(awayNews.length > 0) {
+            context += `\nNOTIZIE ${awayTeamName}:\n`;
+            awayNews.forEach(n => context += `- ${n.title} (${n.publishedAt.split('T')[0]})\n`);
+        }
+        context += `\n=====================================\n`;
     }
 
     return context;
@@ -429,7 +529,7 @@ export const StorageService = {
 
     const backupData: any = {
       meta: {
-        version: '2.7',
+        version: '2.8',
         timestamp: now,
         app: 'RedZoneBet'
       },
@@ -448,6 +548,7 @@ export const StorageService = {
         standings: localStorage.getItem(KEYS.STANDINGS) ? JSON.parse(localStorage.getItem(KEYS.STANDINGS) || '[]') : [],
         matches: localStorage.getItem(KEYS.SEASON_MATCHES) ? JSON.parse(localStorage.getItem(KEYS.SEASON_MATCHES) || '[]') : [],
         scorers: localStorage.getItem(KEYS.SCORERS) ? JSON.parse(localStorage.getItem(KEYS.SCORERS) || '[]') : [],
+        squads: localStorage.getItem(KEYS.SQUADS) ? JSON.parse(localStorage.getItem(KEYS.SQUADS) || '[]') : [],
         lastSync: localStorage.getItem(KEYS.LAST_FOOTBALL_SYNC),
         openingOdds: localStorage.getItem(KEYS.OPENING_ODDS) ? JSON.parse(localStorage.getItem(KEYS.OPENING_ODDS) || '{}') : {}
       },
@@ -490,6 +591,7 @@ export const StorageService = {
         if (backup.footballData.standings) localStorage.setItem(KEYS.STANDINGS, JSON.stringify(backup.footballData.standings));
         if (backup.footballData.matches) localStorage.setItem(KEYS.SEASON_MATCHES, JSON.stringify(backup.footballData.matches));
         if (backup.footballData.scorers) localStorage.setItem(KEYS.SCORERS, JSON.stringify(backup.footballData.scorers));
+        if (backup.footballData.squads) localStorage.setItem(KEYS.SQUADS, JSON.stringify(backup.footballData.squads));
         if (backup.footballData.lastSync) localStorage.setItem(KEYS.LAST_FOOTBALL_SYNC, backup.footballData.lastSync);
         if (backup.footballData.openingOdds) localStorage.setItem(KEYS.OPENING_ODDS, JSON.stringify(backup.footballData.openingOdds));
       }

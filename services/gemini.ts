@@ -1,4 +1,5 @@
 
+
 import { GoogleGenAI, Type, Schema } from '@google/genai';
 import { AnalysisResult, RiskLevel, OracleEvent } from '../types';
 
@@ -34,13 +35,16 @@ export const GeminiService = {
         risky_bet: { type: Type.STRING, description: "Giocata alta quota." },
         risky_reasoning: { type: Type.STRING, description: "Perché rischiare." },
         
-        tactical_insight: { type: Type.STRING, description: "Analisi Tattica Approfondita (min 150 parole). Cita le partite recenti, il METEO e le NOTIZIE infortuni se rilevanti." },
-        key_duels: { type: Type.STRING, description: "Duelli chiave." },
+        tactical_insight: { type: Type.STRING, description: "Analisi Tattica Approfondita (min 150 parole). Usa i NOMI DEI GIOCATORI reali presenti nelle ROSE fornite nel contesto. Cita duelli specifici e caratteristiche tecniche." },
+        key_duels: { type: Type.STRING, description: "Duelli chiave (es. Attaccante X vs Difensore Y)." },
         
         best_value_market: { type: Type.STRING, description: "Mercato con valore." },
         market_reasoning: { type: Type.STRING, description: "Logica matematica." },
         max_drawdown: { type: Type.INTEGER, description: "Max perdite consecutive simulate." },
-        cynical_take: { type: Type.STRING, description: "Commento anti-tifo se necessario." }
+        cynical_take: { type: Type.STRING, description: "Commento anti-tifo se necessario." },
+        
+        unavailable_players: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Lista di nomi di giocatori infortunati/squalificati estratti dalle NEWS/REPORT MEDICO. Se non citati, lascia vuoto." },
+        key_players_analysis: { type: Type.STRING, description: "Analisi breve (max 30 parole) su chi è in forma, basandoti sui tag [TOP SCORER] e sulle news di formazione." }
       },
       required: ["prediction", "risk_level", "recommended_bet", "reasoning", "confidence_score", "exact_score", "bet_1x2", "risky_bet", "risky_reasoning", "tactical_insight", "key_duels", "best_value_market", "market_reasoning", "max_drawdown"]
     };
@@ -53,14 +57,16 @@ export const GeminiService = {
     
     ${weatherContext ? `=== CONDIZIONI METEO PREVISTE ===\n${weatherContext}\nConsidera come questo meteo influenza il gioco (es. Pioggia = campo veloce/pesante, Vento = problemi lanci lunghi).` : ''}
     
-    ${newsContext ? `=== BREAKING NEWS (FONDAMENTALE) ===\n${newsContext}\nUsa queste notizie (Infortuni, cambi formazione, voci spogliatoio) per correggere l'analisi statistica. Se un top player manca, abbassa la probabilità di vittoria.` : ''}
+    ${newsContext ? `=== BREAKING NEWS (FONDAMENTALE) ===\n${newsContext}\nUsa queste notizie (Infortuni, cambi formazione, voci spogliatoio) per correggere l'analisi statistica.` : ''}
     ==================================
     
     ISTRUZIONI CRITICHE:
     1. NON ALLUCINARE: Usa SOLO i dati forniti.
-    2. TACTICAL INSIGHT: Integra l'analisi del meteo e delle NOTIZIE nella tua visione tattica.
-    3. Cerca valore matematico.
-    4. Rispondi in ITALIANO.
+    2. SQUADS & PLAYERS: Nel contesto sopra hai le ROSE COMPLETE. I Top Scorer sono marcati con [TOP SCORER]. Usale!
+    3. MEDICAL REPORT: Se nella sezione 'REPORT MEDICO' o 'NEWS' ci sono nomi di giocatori indisponibili, estraili nel campo 'unavailable_players'.
+    4. KEY PLAYERS: Identifica chi può decidere il match (es. i Top Scorer o chi è citato in forma nelle news).
+    5. Cerca valore matematico.
+    6. Rispondi in ITALIANO.
     `;
 
     if (isFavoriteInvolved) {
@@ -74,7 +80,7 @@ export const GeminiService = {
         config: {
           responseMimeType: "application/json",
           responseSchema: schema,
-          systemInstruction: "Sei un analista di calcio professionista. Basi le tue previsioni ESCLUSIVAMENTE sui dati statistici e sulle NEWS fornite. Se ci sono notizie importanti (infortuni), usale per modificare il pronostico statistico.",
+          systemInstruction: "Sei un analista di calcio professionista. Basi le tue previsioni ESCLUSIVAMENTE sui dati statistici, sulle ROSE e sulle NEWS fornite. Se ci sono notizie importanti (infortuni), usale per modificare il pronostico statistico.",
         }
       });
 
@@ -99,6 +105,8 @@ export const GeminiService = {
         best_value_market: "N/A",
         market_reasoning: "N/A",
         max_drawdown: 0,
+        unavailable_players: [],
+        key_players_analysis: "N/A",
         timestamp: Date.now()
       };
     }
@@ -130,10 +138,12 @@ export const GeminiService = {
     const prompt = `
       Sei un Cronista Sportivo dal futuro (Anno 2050) che ha accesso agli archivi storici. 
       Devi raccontare la cronaca minuto per minuto della partita ${homeTeam} vs ${awayTeam} che si "è giocata" nel 2025.
-      Basati su questi dati reali per rendere la simulazione credibile:
+      
+      === DATI REALI ===
       ${context}
       
       Genera una timeline di 6-8 eventi chiave (Gol, VAR, Occasioni, Cartellini). 
+      IMPORTANTE: Usa i nomi REALI dei giocatori forniti nelle rose (squads) nel contesto sopra. Cita gli assistman.
       Il risultato finale deve essere coerente con le statistiche (es. se una squadra è molto più forte, probabilmente vince).
       Sii drammatico ed emozionante.
     `;

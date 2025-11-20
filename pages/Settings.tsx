@@ -1,9 +1,10 @@
 
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '../components/Button';
 import { StorageService } from '../services/storage';
 import { FootballDataService } from '../services/footballdata';
-import { Key, CheckCircle, XCircle, Trash2, Heart, Download, Upload, Save, AlertTriangle, RefreshCcw, Database, BrainCircuit, Shield, Clock, Table, Calendar, User, Check, X, Wallet, Loader2, Newspaper } from 'lucide-react';
+import { Key, CheckCircle, XCircle, Trash2, Heart, Download, Upload, Save, AlertTriangle, RefreshCcw, Database, BrainCircuit, Shield, Clock, Table, Calendar, User, Check, X, Wallet, Loader2, Newspaper, Users } from 'lucide-react';
 
 export const Settings: React.FC = () => {
   const [keys, setKeys] = useState({ oddsKey: '', geminiKey: '', footballKey: '', newsKey: '' });
@@ -26,6 +27,7 @@ export const Settings: React.FC = () => {
     standings: 0,
     matches: 0,
     scorers: 0,
+    squads: 0,
     lastSync: 0
   });
 
@@ -35,6 +37,7 @@ export const Settings: React.FC = () => {
       standings: data.standings ? data.standings.length : 0,
       matches: data.matches ? data.matches.length : 0,
       scorers: data.scorers ? data.scorers.length : 0,
+      squads: data.squads ? data.squads.length : 0,
       lastSync: data.lastSync || 0
     });
   };
@@ -108,11 +111,15 @@ export const Settings: React.FC = () => {
     setHistoryLoading(true);
     setHistoryStatus('idle');
     try {
-      const standings = await FootballDataService.fetchStandings(keys.footballKey);
-      const matches = await FootballDataService.fetchSeasonMatches(keys.footballKey);
-      const scorers = await FootballDataService.fetchTopScorers(keys.footballKey);
+      // Parallelize fetching for speed
+      const [standings, matches, scorers, squads] = await Promise.all([
+          FootballDataService.fetchStandings(keys.footballKey),
+          FootballDataService.fetchSeasonMatches(keys.footballKey),
+          FootballDataService.fetchTopScorers(keys.footballKey),
+          FootballDataService.fetchTeams(keys.footballKey)
+      ]);
       
-      StorageService.saveFootballData(standings, matches, scorers);
+      StorageService.saveFootballData(standings, matches, scorers, squads);
       setHistoryStatus('success');
       refreshDataStats(); // Refresh stats immediately after sync
     } catch (e) {
@@ -380,10 +387,11 @@ export const Settings: React.FC = () => {
          </div>
         
         {/* DATA STATUS GRID */}
-        <div className="grid grid-cols-3 gap-3 mb-4">
+        <div className="grid grid-cols-4 gap-2 mb-4">
             <DataStatusBadge label="Classifica" count={dataStats.standings} icon={Table} />
             <DataStatusBadge label="Partite" count={dataStats.matches} icon={Calendar} />
             <DataStatusBadge label="Marcatori" count={dataStats.scorers} icon={User} />
+            <DataStatusBadge label="Rose" count={dataStats.squads} icon={Users} />
         </div>
 
         <div className="flex items-center gap-3">

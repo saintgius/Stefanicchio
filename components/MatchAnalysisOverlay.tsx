@@ -1,8 +1,9 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { AnalysisResult, ProcessedMatch, RiskLevel, FootballDataMatch, WeatherData } from '../types';
 import { StorageService } from '../services/storage';
-import { X, TrendingUp, AlertOctagon, ShieldAlert, BrainCircuit, History, Zap, Swords, Percent, DollarSign, BarChart3, FileText, CloudRain, Wind, Sun, Cloud, CloudSnow, Thermometer } from 'lucide-react';
+import { X, TrendingUp, AlertOctagon, ShieldAlert, BrainCircuit, History, Zap, Swords, Percent, DollarSign, BarChart3, FileText, CloudRain, Wind, Sun, Cloud, CloudSnow, Thermometer, Crown, Ambulance } from 'lucide-react';
 import { Button } from './Button';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip } from 'recharts';
 
@@ -201,6 +202,40 @@ export const MatchAnalysisOverlay: React.FC<MatchAnalysisOverlayProps> = ({ matc
                     {analysis.reasoning}
                   </p>
               </div>
+            </div>
+            
+            {/* INJURIES & KEY PLAYERS */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Unavailable */}
+                <div className="bg-cardbg border border-red-900/30 rounded-xl p-4 bg-red-900/5">
+                   <div className="flex items-center gap-2 mb-2">
+                      <Ambulance size={16} className="text-red-400" />
+                      <h3 className="text-xs font-bold text-red-400 uppercase">Probabili Indisponibili</h3>
+                   </div>
+                   <div className="text-xs text-neutral-300 space-y-1">
+                       {analysis.unavailable_players && analysis.unavailable_players.length > 0 ? (
+                           analysis.unavailable_players.map((p, i) => (
+                               <div key={i} className="flex items-center gap-2">
+                                   <div className="w-1 h-1 bg-red-500 rounded-full"></div>
+                                   {p}
+                               </div>
+                           ))
+                       ) : (
+                           <span className="text-neutral-500 italic">Nessun indisponibile di rilievo segnalato.</span>
+                       )}
+                   </div>
+                </div>
+                
+                {/* Key Players */}
+                <div className="bg-cardbg border border-yellow-900/30 rounded-xl p-4 bg-yellow-900/5">
+                   <div className="flex items-center gap-2 mb-2">
+                      <Crown size={16} className="text-yellow-500" />
+                      <h3 className="text-xs font-bold text-yellow-500 uppercase">Uomini Chiave</h3>
+                   </div>
+                   <p className="text-xs text-neutral-300 leading-snug">
+                       {analysis.key_players_analysis || "Analisi giocatori chiave non disponibile."}
+                   </p>
+                </div>
             </div>
             
             {/* DEEP TACTICAL INSIGHT */}

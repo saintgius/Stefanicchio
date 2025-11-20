@@ -28,6 +28,11 @@ export interface AnalysisResult {
   market_reasoning: string;
   max_drawdown: number;
   cynical_take?: string;
+  
+  // Team News & Hierarchies
+  unavailable_players?: string[]; // List of injured/suspended players
+  key_players_analysis?: string;  // Analysis of form/key players
+  
   timestamp: number;
 }
 
@@ -156,6 +161,27 @@ export interface HistoricalMatch {
     score: string;
   }[] | null;
   last_update: string | null;
+}
+
+export interface Player {
+  id: number;
+  name: string;
+  position: string;
+  dateOfBirth?: string;
+  nationality?: string;
+}
+
+export interface TeamSquad {
+  id: number;
+  name: string;
+  tla: string;
+  crest: string;
+  squad: Player[];
+  coach?: {
+      id: number;
+      name: string;
+      nationality?: string;
+  };
 }
 
 export const BET_CATEGORIES = ['1X2', 'Under/Over', 'Goal/NoGoal', 'Angoli', 'Cartellini', 'Marcatori', 'Combo', 'Multipla'];
