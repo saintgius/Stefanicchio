@@ -1,9 +1,11 @@
 
 
+
+
 import React, { useState, useEffect } from 'react';
 import { AnalysisResult, ProcessedMatch, RiskLevel, FootballDataMatch, WeatherData } from '../types';
 import { StorageService } from '../services/storage';
-import { X, TrendingUp, AlertOctagon, ShieldAlert, BrainCircuit, History, Zap, Swords, Percent, DollarSign, BarChart3, FileText, CloudRain, Wind, Sun, Cloud, CloudSnow, Thermometer, Crown, Ambulance, Megaphone, UserCog } from 'lucide-react';
+import { X, TrendingUp, AlertOctagon, ShieldAlert, BrainCircuit, History, Zap, Swords, Percent, DollarSign, BarChart3, FileText, CloudRain, Wind, Sun, Cloud, CloudSnow, Thermometer, Crown, Ambulance, Megaphone, UserCog, Target, Crosshair, Layers, Timer } from 'lucide-react';
 import { Button } from './Button';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip } from 'recharts';
 
@@ -106,6 +108,16 @@ export const MatchAnalysisOverlay: React.FC<MatchAnalysisOverlayProps> = ({ matc
       { name: 'X', prob: probDraw },
       { name: '2', prob: probAway }
   ];
+  
+  // Helper for quick add
+  const QuickAddButton = ({ pick, odd }: {pick: string, odd: number}) => (
+      <button 
+        onClick={() => onAddToSlip(`${match.homeTeam} - ${match.awayTeam}`, pick, odd)}
+        className="text-[10px] bg-neutral-800 hover:bg-neutral-700 text-neutral-300 border border-neutral-700 px-2 py-1 rounded flex items-center gap-1"
+      >
+          <DollarSign size={10} /> Add
+      </button>
+  );
 
   return (
     <div className="fixed inset-0 z-[100] bg-darkbg animate-fade-in overflow-y-auto flex flex-col">
@@ -429,6 +441,54 @@ export const MatchAnalysisOverlay: React.FC<MatchAnalysisOverlayProps> = ({ matc
                 </div>
             </div>
 
+            {/* STEFANICCHIO'S ARSENAL (NEW MULTI-PICK GRID) */}
+            <div className={`bg-neutral-900 border border-neutral-800 rounded-xl p-5 overflow-hidden relative`}>
+                <div className="absolute top-0 right-0 p-3 opacity-10 pointer-events-none">
+                    <Crosshair size={80} />
+                </div>
+                <h3 className="text-sm font-black text-white uppercase mb-4 flex items-center gap-2 tracking-wide relative z-10">
+                    <Target size={18} className="text-purple-500" /> Stefanicchio's Arsenal
+                </h3>
+                
+                <div className="grid grid-cols-2 gap-3 relative z-10">
+                    {/* Multigol */}
+                    <div className="bg-cardbg border border-neutral-700 p-3 rounded-lg flex flex-col justify-between">
+                        <div className="text-[10px] text-neutral-500 font-bold uppercase mb-1 flex items-center gap-1">
+                            <Layers size={10} /> Multigol
+                        </div>
+                        <div className="font-bold text-white text-sm mb-2">{analysis.prediction_multigol || "N/A"}</div>
+                        <QuickAddButton pick={analysis.prediction_multigol} odd={1.75} />
+                    </div>
+
+                    {/* Over/Under */}
+                    <div className="bg-cardbg border border-neutral-700 p-3 rounded-lg flex flex-col justify-between">
+                         <div className="text-[10px] text-neutral-500 font-bold uppercase mb-1 flex items-center gap-1">
+                            <ArrowUpRightIcon size={10} /> Over/Under
+                        </div>
+                        <div className="font-bold text-white text-sm mb-2">{analysis.prediction_over_under || "N/A"}</div>
+                        <QuickAddButton pick={analysis.prediction_over_under} odd={1.80} />
+                    </div>
+
+                    {/* Goalscorer */}
+                    <div className="bg-cardbg border border-neutral-700 p-3 rounded-lg flex flex-col justify-between">
+                        <div className="text-[10px] text-neutral-500 font-bold uppercase mb-1 flex items-center gap-1">
+                            <Target size={10} /> Marcatore
+                        </div>
+                        <div className="font-bold text-white text-sm mb-2">{analysis.prediction_goalscorer || "N/A"}</div>
+                        <QuickAddButton pick={analysis.prediction_goalscorer} odd={2.50} />
+                    </div>
+
+                    {/* Combo */}
+                    <div className="bg-cardbg border border-neutral-700 p-3 rounded-lg flex flex-col justify-between">
+                        <div className="text-[10px] text-neutral-500 font-bold uppercase mb-1 flex items-center gap-1">
+                            <Zap size={10} /> Combo
+                        </div>
+                        <div className="font-bold text-white text-sm mb-2">{analysis.prediction_combo || "N/A"}</div>
+                        <QuickAddButton pick={analysis.prediction_combo} odd={2.20} />
+                    </div>
+                </div>
+            </div>
+
             {/* EXACT SCORE BOARD */}
             <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-6 flex flex-col items-center justify-center relative overflow-hidden">
                 <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent ${isChampions ? 'via-blue-600' : 'via-yellow-600'} to-transparent`}></div>
@@ -436,25 +496,6 @@ export const MatchAnalysisOverlay: React.FC<MatchAnalysisOverlayProps> = ({ matc
                 <div className="text-5xl font-black text-white tracking-tighter neon-text">
                   {analysis.exact_score || "-:-"}
                 </div>
-            </div>
-
-            {/* PREDICTION GRID */}
-            <div className="grid grid-cols-2 gap-4">
-               {/* 1X2 Card */}
-               <div className="bg-cardbg border border-neutral-800 p-4 rounded-xl flex flex-col items-center justify-center">
-                  <span className="text-[10px] font-bold uppercase text-neutral-500 mb-2">Esito 1X2</span>
-                  <div className="w-12 h-12 bg-neutral-800 rounded-full flex items-center justify-center text-xl font-black text-white border border-neutral-700">
-                    {analysis.bet_1x2 || "?"}
-                  </div>
-               </div>
-
-               {/* Value Card */}
-               <div className="bg-cardbg border border-neutral-800 p-4 rounded-xl flex flex-col items-center justify-center text-center">
-                  <span className="text-[10px] font-bold uppercase text-neutral-500 mb-2">Value Bet</span>
-                  <div className="text-sm font-bold text-green-500 leading-tight">
-                    {analysis.best_value_market}
-                  </div>
-               </div>
             </div>
 
              {/* RISKY BET SECTION */}
@@ -521,3 +562,8 @@ export const MatchAnalysisOverlay: React.FC<MatchAnalysisOverlayProps> = ({ matc
     </div>
   );
 };
+
+// Mini Icon component helper
+const ArrowUpRightIcon = ({size, className}: {size: number, className?: string}) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg>
+);

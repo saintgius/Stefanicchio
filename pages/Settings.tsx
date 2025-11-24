@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '../components/Button';
 import { StorageService } from '../services/storage';
@@ -17,6 +18,7 @@ export const Settings: React.FC = () => {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyStatus, setHistoryStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [lastBackupDate, setLastBackupDate] = useState<string | null>(null);
+  const [syncProgress, setSyncProgress] = useState<string>('');
   
   // Bankroll State
   const [bankroll, setBankroll] = useState<number>(1000);
@@ -110,23 +112,60 @@ export const Settings: React.FC = () => {
 
     setHistoryLoading(true);
     setHistoryStatus('idle');
+    setSyncProgress('Avvio...');
+    
     try {
-      // Parallelize fetching for speed
-      const [standings, matches, scorers, squads] = await Promise.all([
-          FootballDataService.fetchStandings(keys.footballKey),
-          FootballDataService.fetchSeasonMatches(keys.footballKey),
-          FootballDataService.fetchTopScorers(keys.footballKey),
-          FootballDataService.fetchTeams(keys.footballKey)
+      const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+      // 1. SYNC SERIE A
+      setSyncProgress('Scaricando Serie A...');
+      const [standingsSA, matchesSA, scorersSA, squadsSA] = await Promise.all([
+          FootballDataService.fetchStandings(keys.footballKey, 'SA'),
+          FootballDataService.fetchSeasonMatches(keys.footballKey, 'SA'),
+          FootballDataService.fetchTopScorers(keys.footballKey, 'SA'),
+          FootballDataService.fetchTeams(keys.footballKey, 'SA')
       ]);
+
+      // Rate limit protection - wait 2 seconds before next batch
+      await wait(2000); 
+
+      // 2. SYNC CHAMPIONS LEAGUE
+      setSyncProgress('Scaricando Champions...');
+      let standingsCL: any[] = [], matchesCL: any[] = [], scorersCL: any[] = [], squadsCL: any[] = [];
+      try {
+          [standingsCL, matchesCL, scorersCL, squadsCL] = await Promise.all([
+              FootballDataService.fetchStandings(keys.footballKey, 'CL'),
+              FootballDataService.fetchSeasonMatches(keys.footballKey, 'CL'),
+              FootballDataService.fetchTopScorers(keys.footballKey, 'CL'),
+              FootballDataService.fetchTeams(keys.footballKey, 'CL')
+          ]);
+      } catch (e) {
+          console.warn("Champions League sync failed (might be tier limit), continuing with Serie A data...", e);
+      }
+
+      // 3. MERGE DATA (Prioritizing unique entries if needed, but here we just replace or append depending on logic)
+      // For simplicity in this app structure, we might overwrite or merge arrays.
+      // Since StorageService isn't built for complex merging of multiple leagues into one array without IDs clashing,
+      // and the Dashboard handles switching context, we will store the MOST RECENT synced data or MERGE if they are compatible lists.
+      // NOTE: The current StorageService simply overwrites. To support both, we should ideally merge the arrays.
       
-      StorageService.saveFootballData(standings, matches, scorers, squads);
+      const mergedStandings = [...standingsSA, ...standingsCL];
+      const mergedMatches = [...matchesSA, ...matchesCL];
+      const mergedScorers = [...scorersSA, ...scorersCL];
+      const mergedSquads = [...squadsSA, ...squadsCL];
+
+      StorageService.saveFootballData(mergedStandings, mergedMatches, mergedScorers, mergedSquads);
+      
+      setSyncProgress('Completato!');
       setHistoryStatus('success');
-      refreshDataStats(); // Refresh stats immediately after sync
+      refreshDataStats(); 
     } catch (e) {
       console.error(e);
+      setSyncProgress('Errore');
       setHistoryStatus('error');
     } finally {
       setHistoryLoading(false);
+      setTimeout(() => setSyncProgress(''), 3000);
     }
   };
 
@@ -372,10 +411,10 @@ export const Settings: React.FC = () => {
          <div className="flex justify-between items-start mb-4">
             <div>
                 <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                    <Database size={18} className="text-neutral-400" /> Dati Serie A (Storico)
+                    <Database size={18} className="text-neutral-400" /> Dati Context (Storico)
                 </h2>
                 <p className="text-neutral-400 text-xs mt-1">
-                    Cache Locale per Contesto AI.
+                    Cache Locale per SA e CL.
                 </p>
             </div>
             {dataStats.lastSync > 0 && (
@@ -402,11 +441,11 @@ export const Settings: React.FC = () => {
             className="text-xs flex-1"
             disabled={!keys.footballKey}
           >
-            <RefreshCcw size={14} /> {historyLoading ? 'AGGIORNAMENTO...' : 'SINCRONIZZA ORA'}
+            <RefreshCcw size={14} /> {historyLoading ? (syncProgress || 'AGGIORNAMENTO...') : 'SINCRONIZZA (SA + CL)'}
           </Button>
           
-          {historyStatus === 'success' && <div className="text-green-500 text-xs flex items-center gap-1 font-bold"><CheckCircle size={16} /> Aggiornato!</div>}
-          {historyStatus === 'error' && <div className="text-red-500 text-xs flex items-center gap-1 font-bold"><AlertTriangle size={16} /> Errore</div>}
+          {historyStatus === 'success' && <div className="text-green-500 text-xs flex items-center gap-1 font-bold"><CheckCircle size={16} /> Ok!</div>}
+          {historyStatus === 'error' && <div className="text-red-500 text-xs flex items-center gap-1 font-bold"><AlertTriangle size={16} /> Err</div>}
         </div>
       </div>
 

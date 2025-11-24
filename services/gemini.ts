@@ -1,5 +1,4 @@
 
-
 import { GoogleGenAI, Type, Schema } from '@google/genai';
 import { AnalysisResult, RiskLevel, OracleEvent } from '../types';
 
@@ -13,7 +12,7 @@ export const GeminiService = {
     richContext: string,
     weatherContext: string | null,
     newsContext: string | null,
-    competition: string = 'Serie A' // NEW PARAMETER
+    competition: string = 'Serie A'
   ): Promise<AnalysisResult> => {
     
     const ai = new GoogleGenAI({ apiKey });
@@ -25,77 +24,89 @@ export const GeminiService = {
     const schema: Schema = {
       type: Type.OBJECT,
       properties: {
-        prediction: { type: Type.STRING, description: "Previsione sintetica." },
-        risk_level: { type: Type.STRING, enum: [RiskLevel.LOW, RiskLevel.MED, RiskLevel.HIGH], description: "Livello di rischio." },
-        recommended_bet: { type: Type.STRING, description: "Giocata Sicura/Consigliata." },
-        reasoning: { type: Type.STRING, description: "Motivazione breve." },
+        prediction: { type: Type.STRING, description: "Previsione sintetica (es. Vittoria netta Inter)." },
+        risk_level: { type: Type.STRING, enum: [RiskLevel.LOW, RiskLevel.MED, RiskLevel.HIGH], description: "Livello di rischio calcolato su 10 fattori." },
+        recommended_bet: { type: Type.STRING, description: "La Giocata Principale (Sicura ma con valore)." },
+        reasoning: { type: Type.STRING, description: "Analisi tecnica basata sui 10 fattori." },
         confidence_score: { type: Type.INTEGER, description: "0-100" },
         
-        exact_score: { type: Type.STRING, description: "Risultato esatto probabile." },
+        exact_score: { type: Type.STRING, description: "Risultato esatto basato su potenziale offensivo/difensivo." },
         bet_1x2: { type: Type.STRING, description: "1, X, o 2." },
-        risky_bet: { type: Type.STRING, description: "Giocata alta quota." },
+        risky_bet: { type: Type.STRING, description: "Giocata alta quota (es. Combo o Marcatore)." },
         risky_reasoning: { type: Type.STRING, description: "Perché rischiare." },
-        
-        tactical_insight: { type: Type.STRING, description: "Analisi Tattica Approfondita (min 150 parole). Usa i NOMI DEI GIOCATORI reali presenti nelle ROSE fornite nel contesto. Cita duelli specifici e caratteristiche tecniche." },
-        key_duels: { type: Type.STRING, description: "Duelli chiave (es. Attaccante X vs Difensore Y)." },
-        
-        manager_duel: { type: Type.STRING, description: "Analisi breve dello scontro tra allenatori (nomi, moduli e chi ha la meglio tatticamente)." },
-        stadium_atmosphere: { type: Type.STRING, description: "Analisi breve del fattore campo (tifosi, stadio caldo, pressione)." },
 
-        best_value_market: { type: Type.STRING, description: "Mercato con valore." },
+        // STEFANICCHIO'S ARSENAL
+        prediction_multigol: { type: Type.STRING, description: "Range gol probabile (es. 2-4, 3-6)." },
+        prediction_over_under: { type: Type.STRING, description: "Linea Over/Under migliore." },
+        prediction_goalscorer: { type: Type.STRING, description: "Marcatore più probabile." },
+        prediction_combo: { type: Type.STRING, description: "Combo Bet logica (es. 1 + NoGoal)." },
+        
+        tactical_insight: { type: Type.STRING, description: "Analisi profonda: possesso, punti deboli, chiavi tattiche." },
+        key_duels: { type: Type.STRING, description: "Duelli chiave in campo." },
+        
+        manager_duel: { type: Type.STRING, description: "Scontro tattico allenatori." },
+        stadium_atmosphere: { type: Type.STRING, description: "Influenza pubblico/stadio." },
+
+        best_value_market: { type: Type.STRING, description: "Mercato con valore matematico." },
         market_reasoning: { type: Type.STRING, description: "Logica matematica." },
         max_drawdown: { type: Type.INTEGER, description: "Max perdite consecutive simulate." },
         cynical_take: { type: Type.STRING, description: "Commento anti-tifo se necessario." },
         
-        unavailable_players: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Lista di nomi di giocatori infortunati/squalificati estratti dalle NEWS/REPORT MEDICO. Se non citati, lascia vuoto." },
-        key_players_analysis: { type: Type.STRING, description: "Analisi breve (max 30 parole) su chi è in forma, basandoti sui tag [TOP SCORER] e sulle news di formazione." }
+        unavailable_players: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Lista infortunati." },
+        key_players_analysis: { type: Type.STRING, description: "Chi è in forma?" }
       },
-      required: ["prediction", "risk_level", "recommended_bet", "reasoning", "confidence_score", "exact_score", "bet_1x2", "risky_bet", "risky_reasoning", "tactical_insight", "key_duels", "manager_duel", "stadium_atmosphere", "best_value_market", "market_reasoning", "max_drawdown"]
+      required: ["prediction", "risk_level", "recommended_bet", "reasoning", "confidence_score", "exact_score", "bet_1x2", "risky_bet", "risky_reasoning", "prediction_multigol", "prediction_over_under", "prediction_goalscorer", "prediction_combo", "tactical_insight", "key_duels", "manager_duel", "stadium_atmosphere", "best_value_market", "market_reasoning", "max_drawdown"]
     };
 
-    let competitionInstruction = "";
-    if (competition.includes('Champions') || competition.includes('CL')) {
-        competitionInstruction = `
-        IMPORTANTE - CONTESTO CHAMPIONS LEAGUE (NOTTI MAGICHE):
-        1. Questa è l'Elite. Le squadre giocano diversamente che in campionato.
-        2. "DNA EUROPEO": Squadre come Real Madrid, Milan, Liverpool hanno un bonus mentale enorme in questa competizione.
-        3. FATTORE CAMPO: Giocare ad Anfield, San Siro, Westfalenstadion cambia le partite. Consideralo.
-        4. MOTIVAZIONI: Chi deve vincere per forza? Chi è già qualificato?
-        5. GESTIONE ALLENATORI: I top coach preparano queste gare sui dettagli.
-        `;
+    // CALCOLO MATEMATICO PRE-PROMPT
+    const lowestOdd = Math.min(odds.home, odds.away);
+    const isImbalanced = lowestOdd < 1.45; 
+    const isVeryImbalanced = lowestOdd < 1.25; 
+    const isTight = lowestOdd > 2.10; 
+
+    let scenarioInstruction = "";
+    if (isVeryImbalanced) {
+        scenarioInstruction = "DOMINIO TOTALE. Squadra nettamente superiore. Risultati attesi: 3-0, 4-0, 4-1. NO 1-0 o 2-1.";
+    } else if (isImbalanced) {
+        scenarioInstruction = "CHIARA FAVORITA. Vittoria probabile con margine. Risultati: 2-0, 3-1. Evita sorprese se non motivate da assenze.";
+    } else if (isTight) {
+        scenarioInstruction = "EQUILIBRIO/SCACCHI. Match da X, 1-1, 0-0 o vittoria di misura 1-0. Partita decisa da episodi.";
     } else {
-        competitionInstruction = `
-        IMPORTANTE - CONTESTO SERIE A (TATTICISMO):
-        1. Il campionato italiano è scacchi. Molta tattica, difese chiuse.
-        2. Considera la stanchezza post-coppe se hanno giocato in settimana.
-        3. Scontri salvezza o alta classifica? La paura di perdere spesso porta al pareggio (X).
-        `;
+        scenarioInstruction = "PARTITA APERTA. Entrambe possono segnare. Focus su Over/Goal.";
     }
 
-    let prompt = `Analizza ${homeTeam} vs ${awayTeam} (${competition}). 
-    Quote: 1(${odds.home}), X(${odds.draw}), 2(${odds.away}).
+    let prompt = `Analizza il match: ${homeTeam} vs ${awayTeam} (${competition}).
     
-    ${competitionInstruction}
+    QUOTE: 1(${odds.home}) | X(${odds.draw}) | 2(${odds.away}).
+    SCENARIO BASE IMPOSTO: ${scenarioInstruction}
+    
+    === LA MATRICE DEI 10 FATTORI (DEVI VALUTARLI TUTTI) ===
+    1. DISPARITÀ TECNICA: Confronta le rose fornite. Chi ha più qualità pura?
+    2. STATO DI FORMA: Analizza le ultime 5 partite nel contesto. Chi è in crisi? Chi vola?
+    3. FATTORE CAMPO: Quanto pesa lo stadio oggi? (Es. Anfield/San Siro in Champions = Fortino).
+    4. INFERMERIA: Controlla le news nel contesto. Manca il bomber? Manca il portiere?
+    5. MOTIVAZIONI: Chi ha più bisogno di punti? (Salvezza vs Titolo vs 'Infrasettimanale inutile').
+    6. TATTICA: Stili di gioco. Contropiede vs Possesso? Difesa alta vs Lancio lungo?
+    7. STORICO (H2H): C'è una bestia nera?
+    8. CALENDARIO/FATICA: Hanno giocato 3 giorni fa? C'è il turnover?
+    9. METEO: ${weatherContext || "N/D"}. Se piove/vento -> più errori, Under o Over casuali.
+    10. DATI GOL: Guarda gol fatti/subiti nel contesto. Difese colabrodo = Goleada.
 
-    === CONTESTO UFFICIALE E REALE ===
+    === CONTESTO REALE ===
     ${richContext}
     
-    ${weatherContext ? `=== CONDIZIONI METEO PREVISTE ===\n${weatherContext}\nConsidera come questo meteo influenza il gioco.` : ''}
+    ${newsContext ? `ULTIME NEWS:\n${newsContext}` : ''}
     
-    ${newsContext ? `=== BREAKING NEWS (FONDAMENTALE) ===\n${newsContext}\nUsa queste notizie (Infortuni, cambi formazione, voci spogliatoio) per correggere l'analisi statistica.` : ''}
-    ==================================
-    
-    ISTRUZIONI CRITICHE PER L'ANALISI:
-    1. NON ALLUCINARE: Usa SOLO i dati forniti.
-    2. SQUADS & PLAYERS: Nel contesto sopra hai le ROSE COMPLETE.
-    3. MEDICAL REPORT: Estrai infortuni reali.
-    4. DUELLO ALLENATORI: Analizza lo scontro in panchina.
-    5. FATTORE STADIO: Quanto influirà il pubblico?
-    6. Rispondi in ITALIANO.
+    COMPITI:
+    - Usa la Matrice dei 10 Fattori per dedurre il risultato.
+    - Se c'è disparità tecnica E forma positiva -> GOLEADA.
+    - Se c'è equilibrio ma difese deboli -> MULTIGOL ALTO.
+    - NON ESSERE BANALE. Se i dati dicono 4-0, scrivi 4-0, non 1-0.
+    - Stefanicchio vuole precisione sui Marcatori: scegli chi tira i rigori o chi è "on fire" dai dati.
     `;
 
     if (isFavoriteInvolved) {
-      prompt += `\nATTENZIONE: L'utente tifa ${userFavoriteTeam}. Sii CINICO e spietato sui difetti della sua squadra.`;
+        prompt += `\nNOTA: L'utente tifa ${userFavoriteTeam}. Sii brutale e onesto, non illuderlo.`;
     }
 
     try {
@@ -105,7 +116,7 @@ export const GeminiService = {
         config: {
           responseMimeType: "application/json",
           responseSchema: schema,
-          systemInstruction: "Sei un analista di calcio professionista specializzato in Betting Exchange e Analisi Tattica Avanzata. Non dare risposte banali. Analizza i matchup tattici.",
+          systemInstruction: "Sei un analista calcistico d'élite. Non indovini, CALCOLI. Usi una matrice a 10 fattori per determinare l'esito. Sei allergico ai pronostici banali se i dati suggeriscono altro. Se una squadra è nettamente più forte, prevedi un dominio.",
         }
       });
 
@@ -119,13 +130,17 @@ export const GeminiService = {
         prediction: "Dati Insufficienti",
         risk_level: RiskLevel.HIGH,
         recommended_bet: "No Bet",
-        reasoning: "Impossibile completare l'analisi tecnica.",
+        reasoning: "Impossibile completare l'analisi a 10 fattori.",
         confidence_score: 0,
         exact_score: "-:-",
         bet_1x2: "N/A",
         risky_bet: "N/A",
         risky_reasoning: "N/A",
-        tactical_insight: "Si è verificato un errore durante l'elaborazione dell'analisi AI o i dati di contesto erano insufficienti.",
+        prediction_multigol: "N/A",
+        prediction_over_under: "N/A",
+        prediction_goalscorer: "N/A",
+        prediction_combo: "N/A",
+        tactical_insight: "Errore tecnico AI.",
         key_duels: "N/A",
         manager_duel: "N/A",
         stadium_atmosphere: "N/A",
@@ -139,7 +154,6 @@ export const GeminiService = {
     }
   },
 
-  // --- ORACLE SIMULATION ---
   simulateMatch: async (
     apiKey: string,
     homeTeam: string,
@@ -163,16 +177,13 @@ export const GeminiService = {
     };
 
     const prompt = `
-      Sei un Cronista Sportivo dal futuro (Anno 2050) che ha accesso agli archivi storici. 
-      Devi raccontare la cronaca minuto per minuto della partita ${homeTeam} vs ${awayTeam} che si "è giocata" nel 2025.
+      Simula la cronaca della partita ${homeTeam} vs ${awayTeam}.
       
-      === DATI REALI ===
+      DATI:
       ${context}
       
-      Genera una timeline di 6-8 eventi chiave (Gol, VAR, Occasioni, Cartellini). 
-      IMPORTANTE: Usa i nomi REALI dei giocatori forniti nelle rose (squads) nel contesto sopra. Cita gli assistman.
-      Il risultato finale deve essere coerente con le statistiche (es. se una squadra è molto più forte, probabilmente vince).
-      Sii drammatico ed emozionante.
+      Genera 6-8 eventi chiave in ordine cronologico.
+      Se una squadra è molto più forte nel contesto, falla dominare (es. gol multipli).
     `;
 
     try {
@@ -190,54 +201,36 @@ export const GeminiService = {
       }
       return [];
     } catch (e) {
-      console.error("Oracle Error", e);
       return [];
     }
   },
 
-  // --- TILT DETECTOR ---
   getTiltWarning: async (apiKey: string): Promise<string> => {
      const ai = new GoogleGenAI({ apiKey });
-     const prompt = `
-       L'utente ha perso 3 scommesse di fila e sta provando a puntare una cifra alta (Rage Betting).
-       Scrivi un messaggio breve, cinico, duro e diretto (massimo 20 parole) per dirgli di fermarsi subito.
-       Usa un tono da "Coach Cattivo" o da "Amico Brutalmente Onesto".
-       Esempio: "Stai regalando soldi al bookmaker perché sei arrabbiato. Spegni il telefono."
-     `;
-     
      try {
        const response = await ai.models.generateContent({
          model: 'gemini-2.5-flash',
-         contents: prompt
+         contents: "L'utente sta scommettendo per rabbia (Tilt). Dagli uno stop perentorio in 10 parole. Tono militare."
        });
-       return response.text || "Fermati. Stai giocando per rabbia, non per logica.";
+       return response.text || "STOP. Stai regalando soldi al banco. Chiudi l'app.";
      } catch (e) {
        return "Rilevato Rage Betting. Prenditi una pausa.";
      }
   },
 
-  // --- THE AUTOPSY (Post-Match Analysis) ---
   generateAutopsy: async (
       apiKey: string, 
       betDetails: string
   ): Promise<string> => {
       const ai = new GoogleGenAI({ apiKey });
-      const prompt = `
-        Sono un "Autopsy Bot". L'utente ha perso questa scommessa: "${betDetails}".
-        Analizza il fallimento in modo cinico e analitico. 
-        Spiega brevemente (max 30 parole) perché è andata male, citando statistiche generali del calcio o sfortuna (xG, VAR, difesa colabrodo).
-        Usa un tono ironico ma educativo.
-        Esempio: "Hai perso perché la difesa del Milan oggi era in vacanza e tu hai ignorato gli xG del Sassuolo."
-      `;
-
       try {
           const response = await ai.models.generateContent({
               model: 'gemini-2.5-flash',
-              contents: prompt
+              contents: `Analizza perché questa scommessa è stata persa: "${betDetails}". Sii cinico, tecnico e breve (max 25 parole).`
           });
-          return response.text || "Scommessa persa. A volte è solo sfortuna, ma controlla meglio le quote la prossima volta.";
+          return response.text || "Scommessa persa. Analisi non disponibile.";
       } catch (e) {
-          return "Analisi Autopsy non disponibile.";
+          return "Analisi non disponibile.";
       }
   }
 };

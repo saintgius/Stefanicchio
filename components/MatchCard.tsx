@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useRef } from 'react';
 import { ProcessedMatch, AnalysisResult, RiskLevel, WeatherData } from '../types';
 import { StorageService } from '../services/storage';
@@ -29,10 +27,10 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, geminiKey, league =
   
   const isChampions = league === 'CL';
   
-  // Stefanicchio's Blue Button for Champions
+  // Stefanicchio's Blue Button for Champions - FIXED with !important overrides
   const themeBtnClass = isChampions 
-    ? 'bg-blue-600 hover:bg-blue-500 shadow-[0_0_15px_rgba(37,99,235,0.5)] border border-blue-500/50' 
-    : 'bg-redzone-600 hover:bg-redzone-500 shadow-[0_0_10px_rgba(220,38,38,0.4)] border border-redzone-600/50';
+    ? '!bg-blue-600 !hover:bg-blue-500 !border-blue-500 !shadow-[0_0_15px_rgba(37,99,235,0.5)] !text-white' 
+    : 'bg-redzone-600 hover:bg-redzone-500 border-redzone-600 shadow-[0_0_10px_rgba(220,38,38,0.4)]';
   
   // Oracle State
   const [showOracle, setShowOracle] = useState(false);
@@ -300,7 +298,8 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, geminiKey, league =
           <Button 
             onClick={handleAnalyze} 
             isLoading={loading}
-            className={`w-full ${themeBtnClass} transition-all`}
+            className={`w-full ${themeBtnClass} transition-all border`}
+            variant="primary" 
           >
             <BrainCircuit size={18} /> {loading ? "ANALISI..." : "ANALISI IA"}
           </Button>

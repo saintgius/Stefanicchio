@@ -19,6 +19,12 @@ export interface AnalysisResult {
   risky_bet: string;        // "Combo 1 + Over 2.5"
   risky_reasoning: string;
   
+  // Stefanicchio's Arsenal (Multiple Picks)
+  prediction_multigol: string;   // "Multigol 2-4"
+  prediction_over_under: string; // "Over 2.5"
+  prediction_goalscorer: string; // "Lautaro Martinez"
+  prediction_combo: string;      // "1X + Over 1.5"
+  
   // Deep Analysis
   tactical_insight: string; // Long text (>100 words)
   key_duels: string;        // "Lautaro vs Tomori"

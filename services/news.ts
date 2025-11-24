@@ -10,23 +10,22 @@ export interface NewsArticle {
     url: string;
     urlToImage: string | null;
     publishedAt: string;
-    topic?: string; // Added to track source topic
+    topic?: string;
 }
 
 export const NewsService = {
-    fetchNews: async (apiKey: string, topic: string = 'Serie A'): Promise<NewsArticle[]> => {
+    fetchNews: async (apiKey: string, topic: string = 'ALL'): Promise<NewsArticle[]> => {
         try {
-            // Costruiamo una query specifica basata sul topic
-            let q = '';
-            if (topic === 'Champions League') {
-                q = '"Champions League" OR "UEFA" OR "Inter" OR "Milan" OR "Juventus" OR "Atalanta" OR "Bologna"'; 
-            } else {
-                q = '"Serie A" AND (infortunio OR formazioni OR squalificato OR convocati OR "calciomercato")';
-            }
+            // Query espansa per includere Big Europee e termini specifici Champions
+            const teams = '"Inter" OR "Milan" OR "Juventus" OR "Roma" OR "Napoli" OR "Real Madrid" OR "Manchester City" OR "Barcelona" OR "Bayern Munich" OR "PSG" OR "Arsenal" OR "Liverpool" OR "Atletico Madrid"';
+            const competitions = '"Serie A" OR "Champions League" OR "UEFA" OR "Coppa Italia"';
+            const keywords = 'calcio OR gol OR infortunio OR formazioni OR conferenza';
+
+            // Costruzione query bilanciata
+            const q = `(${competitions} OR ${teams}) AND (${keywords})`;
             
             const query = encodeURIComponent(q);
-            // Ordina per più recenti
-            const targetUrl = `${NEWS_API_URL}?q=${query}&language=it&sortBy=publishedAt&pageSize=12&apiKey=${apiKey}`;
+            const targetUrl = `${NEWS_API_URL}?q=${query}&language=it&sortBy=publishedAt&pageSize=40&apiKey=${apiKey}`;
             const finalUrl = `${PROXY_URL}${encodeURIComponent(targetUrl)}`;
 
             const response = await fetch(finalUrl);
@@ -37,8 +36,16 @@ export const NewsService = {
 
             const data = await response.json();
             
-            // Add topic tag to articles
-            return (data.articles || []).map((a: any) => ({ ...a, topic }));
+            return (data.articles || []).map((a: any) => {
+                const txt = (a.title + a.description).toLowerCase();
+                let detTopic = 'SERIE A';
+                
+                // Detection più aggressiva per Champions
+                if (txt.includes('champions') || txt.includes('uefa') || txt.includes('real') || txt.includes('city') || txt.includes('bayern') || txt.includes('psg') || txt.includes('barcellona') || txt.includes('arsenal') || txt.includes('liverpool') || txt.includes('atletico')) {
+                    detTopic = 'CHAMPIONS';
+                }
+                return { ...a, topic: detTopic };
+            });
         } catch (e) {
             console.error("News Fetch Error", e);
             return [];
