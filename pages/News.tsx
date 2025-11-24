@@ -2,12 +2,13 @@
 import React, { useState, useEffect } from 'react';
 import { NewsService, NewsArticle } from '../services/news';
 import { StorageService } from '../services/storage';
-import { Newspaper, RefreshCw, ExternalLink, Calendar } from 'lucide-react';
+import { Newspaper, RefreshCw, ExternalLink, Calendar, Trophy, Shield } from 'lucide-react';
 
 export const News: React.FC = () => {
   const [articles, setArticles] = useState<NewsArticle[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeTopic, setActiveTopic] = useState<'Serie A' | 'Champions League'>('Serie A');
 
   const loadNews = async () => {
     const keys = StorageService.getKeys();
@@ -19,7 +20,7 @@ export const News: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const fetchedNews = await NewsService.fetchSerieANews(keys.newsKey);
+      const fetchedNews = await NewsService.fetchNews(keys.newsKey, activeTopic);
       setArticles(fetchedNews);
       StorageService.saveNews(fetchedNews);
     } catch (err) {
@@ -31,19 +32,16 @@ export const News: React.FC = () => {
   };
 
   useEffect(() => {
-    const cached = StorageService.getNews();
-    if (cached && cached.length > 0) {
-      setArticles(cached);
-    } else {
-      loadNews();
-    }
-  }, []);
+     loadNews();
+  }, [activeTopic]);
+
+  const isChampions = activeTopic === 'Champions League';
 
   return (
     <div className="space-y-6 pb-24 animate-fade-in">
       <div className="flex justify-between items-center border-b border-neutral-800 pb-4">
         <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2 text-white">
-           <Newspaper className="text-orange-500" />
+           <Newspaper className={isChampions ? 'text-blue-500' : 'text-redzone-500'} />
            ULTIME NOTIZIE
         </h2>
         <button 
@@ -53,6 +51,22 @@ export const News: React.FC = () => {
         >
           <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
         </button>
+      </div>
+      
+      {/* TOPIC TOGGLE */}
+      <div className="flex gap-2">
+         <button 
+           onClick={() => setActiveTopic('Serie A')}
+           className={`flex-1 py-2 rounded-lg font-bold text-xs uppercase flex items-center justify-center gap-2 border transition-colors ${!isChampions ? 'bg-redzone-900/20 border-redzone-600 text-white' : 'bg-neutral-900 border-neutral-800 text-neutral-500'}`}
+         >
+           <Shield size={14} /> Serie A
+         </button>
+         <button 
+           onClick={() => setActiveTopic('Champions League')}
+           className={`flex-1 py-2 rounded-lg font-bold text-xs uppercase flex items-center justify-center gap-2 border transition-colors ${isChampions ? 'bg-blue-900/20 border-blue-600 text-white' : 'bg-neutral-900 border-neutral-800 text-neutral-500'}`}
+         >
+           <Trophy size={14} /> Champions League
+         </button>
       </div>
 
       {error && (
@@ -68,14 +82,14 @@ export const News: React.FC = () => {
             href={article.url} 
             target="_blank" 
             rel="noopener noreferrer"
-            className="block bg-cardbg border border-neutral-800 rounded-xl overflow-hidden hover:border-neutral-600 transition-all active:scale-[0.99]"
+            className={`block bg-cardbg border rounded-xl overflow-hidden transition-all active:scale-[0.99] group ${isChampions ? 'border-neutral-800 hover:border-blue-600' : 'border-neutral-800 hover:border-redzone-600'}`}
           >
             {article.urlToImage && (
               <div className="h-32 w-full overflow-hidden relative">
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent z-10"></div>
-                <img src={article.urlToImage} alt={article.title} className="w-full h-full object-cover" />
+                <img src={article.urlToImage} alt={article.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                 <div className="absolute bottom-2 left-3 z-20">
-                   <span className="text-[10px] font-bold bg-orange-600 text-white px-2 py-0.5 rounded uppercase">
+                   <span className={`text-[10px] font-bold text-white px-2 py-0.5 rounded uppercase ${isChampions ? 'bg-blue-600' : 'bg-redzone-600'}`}>
                       {article.source.name}
                    </span>
                 </div>
@@ -84,10 +98,13 @@ export const News: React.FC = () => {
             <div className="p-4">
                <div className="flex items-center gap-2 text-[10px] text-neutral-500 mb-2">
                   <Calendar size={10} /> {new Date(article.publishedAt).toLocaleString('it-IT')}
+                  <span className={`px-1.5 rounded text-[9px] font-bold ${isChampions ? 'bg-blue-900/30 text-blue-400' : 'bg-redzone-900/30 text-redzone-400'}`}>
+                      {isChampions ? 'UCL' : 'SERIE A'}
+                  </span>
                </div>
                <h3 className="font-bold text-white text-sm leading-tight mb-2">{article.title}</h3>
                <p className="text-xs text-neutral-400 line-clamp-2">{article.description}</p>
-               <div className="mt-3 text-xs text-blue-400 flex items-center gap-1 font-bold">
+               <div className={`mt-3 text-xs flex items-center gap-1 font-bold ${isChampions ? 'text-blue-400' : 'text-redzone-400'}`}>
                   LEGGI ARTICOLO <ExternalLink size={10} />
                </div>
             </div>
@@ -97,7 +114,7 @@ export const News: React.FC = () => {
 
       {!loading && articles.length === 0 && !error && (
          <div className="text-center text-neutral-500 py-10">
-            Nessuna notizia trovata.
+            Nessuna notizia trovata per {activeTopic}.
          </div>
       )}
     </div>

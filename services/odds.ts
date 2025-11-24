@@ -1,12 +1,12 @@
 
 import { OddsData, ProcessedMatch, HistoricalMatch } from '../types';
 
-const BASE_URL = 'https://api.the-odds-api.com/v4/sports/soccer_italy_serie_a';
+const BASE_URL = 'https://api.the-odds-api.com/v4/sports';
 
 export const OddsService = {
-  fetchMatches: async (apiKey: string): Promise<ProcessedMatch[]> => {
+  fetchMatches: async (apiKey: string, sportKey: string = 'soccer_italy_serie_a'): Promise<ProcessedMatch[]> => {
     try {
-      const response = await fetch(`${BASE_URL}/odds?regions=eu&markets=h2h&apiKey=${apiKey}`);
+      const response = await fetch(`${BASE_URL}/${sportKey}/odds?regions=eu&markets=h2h&apiKey=${apiKey}`);
       
       if (!response.ok) {
         throw new Error('Errore nel recupero quote');
@@ -48,10 +48,10 @@ export const OddsService = {
     }
   },
 
-  fetchHistory: async (apiKey: string): Promise<HistoricalMatch[]> => {
+  fetchHistory: async (apiKey: string, sportKey: string = 'soccer_italy_serie_a'): Promise<HistoricalMatch[]> => {
     try {
       // Fetch last 90 days
-      const response = await fetch(`${BASE_URL}/scores?daysFrom=90&apiKey=${apiKey}`);
+      const response = await fetch(`${BASE_URL}/${sportKey}/scores?daysFrom=90&apiKey=${apiKey}`);
       
       if (!response.ok) {
         throw new Error('Errore nel recupero storico');

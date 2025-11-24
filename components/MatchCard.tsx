@@ -1,29 +1,38 @@
 
+
 import React, { useState, useEffect, useRef } from 'react';
 import { ProcessedMatch, AnalysisResult, RiskLevel, WeatherData } from '../types';
 import { StorageService } from '../services/storage';
 import { GeminiService } from '../services/gemini';
 import { WeatherService } from '../services/weather';
 import { Button } from './Button';
-import { BrainCircuit, CheckCircle, ChevronRight, Trash2, Flame, Sparkles, CloudRain, Wind, Sun, Cloud, CloudSnow, Gem } from 'lucide-react';
+import { BrainCircuit, CheckCircle, ChevronRight, Trash2, Flame, Sparkles, CloudRain, Wind, Sun, Cloud, CloudSnow, Gem, Star } from 'lucide-react';
 import { MatchAnalysisOverlay } from './MatchAnalysisOverlay';
 import { OracleOverlay } from './OracleOverlay';
 
 interface MatchCardProps {
   match: ProcessedMatch;
   geminiKey: string | null;
+  league?: 'SA' | 'CL'; // NEW PROP
   onDeleteAnalysis?: () => void;
   onAddToSlip?: (match: string, selection: string, odds: number) => void;
   dropPercentage?: number;
 }
 
-export const MatchCard: React.FC<MatchCardProps> = ({ match, geminiKey, onDeleteAnalysis, onAddToSlip, dropPercentage }) => {
+export const MatchCard: React.FC<MatchCardProps> = ({ match, geminiKey, league = 'SA', onDeleteAnalysis, onAddToSlip, dropPercentage }) => {
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [isCached, setIsCached] = useState(false);
   const [showOverlay, setShowOverlay] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [weather, setWeather] = useState<WeatherData | null>(null);
+  
+  const isChampions = league === 'CL';
+  
+  // Stefanicchio's Blue Button for Champions
+  const themeBtnClass = isChampions 
+    ? 'bg-blue-600 hover:bg-blue-500 shadow-[0_0_15px_rgba(37,99,235,0.5)] border border-blue-500/50' 
+    : 'bg-redzone-600 hover:bg-redzone-500 shadow-[0_0_10px_rgba(220,38,38,0.4)] border border-redzone-600/50';
   
   // Oracle State
   const [showOracle, setShowOracle] = useState(false);
@@ -87,10 +96,9 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, geminiKey, onDelete
           
           const relevantNews = cachedNews.filter(article => {
               const text = (article.title + article.description).toLowerCase();
-              // Filter matches by team name
               return homeTerms.some(t => t.length > 3 && text.includes(t.toLowerCase())) || 
                      awayTerms.some(t => t.length > 3 && text.includes(t.toLowerCase())) ||
-                     text.includes('serie a');
+                     text.includes(league === 'CL' ? 'champions' : 'serie a');
           });
 
           if (relevantNews.length > 0) {
@@ -106,7 +114,8 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, geminiKey, onDelete
         favTeam,
         richContext,
         weatherContext,
-        newsContext
+        newsContext,
+        league === 'CL' ? 'Champions League' : 'Serie A'
       );
 
       StorageService.saveAnalysis(match.id, result);
@@ -121,14 +130,12 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, geminiKey, onDelete
   };
 
   const handleDelete = () => {
-      // Update Storage first
       if (onDeleteAnalysis) {
           onDeleteAnalysis();
       } else {
           StorageService.deleteAnalysis(match.id);
       }
       
-      // Then update UI state
       setAnalysis(null);
       setIsCached(false);
       setShowOverlay(false);
@@ -141,10 +148,9 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, geminiKey, onDelete
     isLongPress.current = false;
     timerRef.current = setTimeout(() => {
       isLongPress.current = true;
-      // Trigger Delete Mode
       if (navigator.vibrate) navigator.vibrate(50);
       setShowDeleteConfirm(true);
-    }, 800); // 800ms for long press
+    }, 800); 
   };
 
   const endPress = () => {
@@ -154,7 +160,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, geminiKey, onDelete
   };
 
   const handleCardClick = () => {
-    if (isLongPress.current) return; // Don't open overlay if it was a long press
+    if (isLongPress.current) return; 
     if (analysis) {
       setShowOverlay(true);
     }
@@ -180,23 +186,24 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, geminiKey, onDelete
       }
   };
 
-  // --- VALUE BET FINDER ---
-  // Implied Probability (Home) = (1 / Decimal Odds) * 100
-  // If Gemini Confidence > Implied Prob + 5% Margin -> VALUE
   const impliedProb = match.odds.home > 0 ? (1 / match.odds.home) * 100 : 0;
   const isValueBet = analysis && (analysis.confidence_score > (impliedProb + 5));
 
+  // --- POWER BAR CALCULATION ---
+  const totalProb = (1/match.odds.home) + (1/match.odds.away); // Ignore draw for bar
+  const homeStrength = ((1/match.odds.home) / totalProb) * 100;
+  
   return (
     <>
       <div 
-        className={`bg-cardbg rounded-xl p-4 border-l-4 relative transition-all select-none ${analysis ? getRiskColor(analysis.risk_level) : 'border-l-neutral-700 border border-neutral-800'}`}
+        className={`bg-cardbg rounded-xl p-4 border-l-4 relative transition-all select-none ${analysis ? getRiskColor(analysis.risk_level) : `border-l-neutral-700 border border-neutral-800`}`}
         onTouchStart={startPress}
         onTouchEnd={endPress}
         onMouseDown={startPress}
         onMouseUp={endPress}
         onMouseLeave={endPress}
       >
-        {/* Delete Confirm Overlay (Visible on Long Press trigger) */}
+        {/* Delete Confirm Overlay */}
         {showDeleteConfirm && (
           <div className="absolute inset-0 bg-black/90 z-50 flex flex-col items-center justify-center rounded-xl animate-fade-in">
              <p className="text-white font-bold mb-4">Eliminare Analisi?</p>
@@ -217,7 +224,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, geminiKey, onDelete
           </div>
         )}
         
-        {/* Value Bet Badge (Floating) */}
+        {/* Value Bet Badge */}
         {isValueBet && (
              <div className="absolute -top-2 -right-2 bg-blue-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 shadow-[0_0_10px_#2563eb] animate-pulse">
                  <Gem size={10} /> VALUE DETECTED
@@ -228,10 +235,13 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, geminiKey, onDelete
         <div className="flex justify-between items-center mb-4">
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
+                <span className={`text-[10px] font-bold px-1.5 rounded ${isChampions ? 'bg-blue-900/50 text-blue-400 border border-blue-900' : 'bg-neutral-800 text-neutral-400'}`}>
+                    {isChampions ? <span className="flex items-center gap-1"><Star size={8} fill="currentColor"/> UCL</span> : 'SA'}
+                </span>
                 <span className="text-xs text-neutral-500 font-mono">{new Date(match.startTime).toLocaleString('it-IT', {day: 'numeric', month: 'short', hour: '2-digit', minute:'2-digit'})}</span>
                 {dropPercentage && dropPercentage > 5 && (
                     <span className="bg-red-900/50 text-red-400 px-1.5 py-0.5 rounded text-[10px] font-bold flex items-center gap-0.5 border border-red-900 animate-pulse">
-                        <Flame size={10} /> DROP -{dropPercentage}%
+                        <Flame size={10} /> -{dropPercentage}%
                     </span>
                 )}
             </div>
@@ -258,7 +268,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, geminiKey, onDelete
         </div>
 
         {/* Teams & Odds */}
-        <div className="grid grid-cols-3 gap-2 text-center mb-6">
+        <div className="grid grid-cols-3 gap-2 text-center mb-2">
           <div className="flex flex-col items-center justify-center">
             <span className="font-bold text-lg leading-tight">{match.homeTeam}</span>
             <span className="bg-neutral-800 text-neutral-300 px-2 py-1 rounded mt-2 text-sm font-mono">{match.odds.home.toFixed(2)}</span>
@@ -272,13 +282,25 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, geminiKey, onDelete
             <span className="bg-neutral-800 text-neutral-300 px-2 py-1 rounded mt-2 text-sm font-mono">{match.odds.away.toFixed(2)}</span>
           </div>
         </div>
+        
+        {/* POWER BAR (Visual Strength) */}
+        <div className="mb-6 px-4">
+             <div className="w-full h-1.5 bg-neutral-800 rounded-full overflow-hidden flex">
+                 <div className="h-full bg-white/30" style={{ width: `${homeStrength}%` }}></div>
+                 <div className="h-full bg-black/30" style={{ width: `${100 - homeStrength}%` }}></div>
+             </div>
+             <div className="flex justify-between text-[8px] text-neutral-600 mt-0.5 uppercase font-bold tracking-widest">
+                 <span>Power Home</span>
+                 <span>Power Away</span>
+             </div>
+        </div>
 
         {/* Actions */}
         {!analysis ? (
           <Button 
             onClick={handleAnalyze} 
             isLoading={loading}
-            className="w-full"
+            className={`w-full ${themeBtnClass} transition-all`}
           >
             <BrainCircuit size={18} /> {loading ? "ANALISI..." : "ANALISI IA"}
           </Button>
@@ -306,6 +328,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, geminiKey, onDelete
         <MatchAnalysisOverlay 
           match={match} 
           analysis={analysis} 
+          league={league}
           onClose={() => setShowOverlay(false)} 
           onDelete={handleDelete}
           onAddToSlip={onAddToSlip ? onAddToSlip : () => {}}

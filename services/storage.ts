@@ -25,8 +25,9 @@ const normalizeTeamName = (name: string): string => {
   if (!name) return '';
   let n = name.toLowerCase();
   
-  // Mappature specifiche note per Serie A
+  // Mappature specifiche note per Serie A & CHAMPIONS LEAGUE
   const mappings: {[key: string]: string} = {
+    // SERIE A
     'inter': 'inter',
     'internazionale': 'inter',
     'fc internazionale milano': 'inter',
@@ -47,6 +48,8 @@ const normalizeTeamName = (name: string): string => {
     'atalanta bc': 'atalanta',
     'bologna': 'bologna',
     'bologna fc': 'bologna',
+    'udinese': 'udinese',
+    'udinese calcio': 'udinese',
     'torino': 'torino',
     'torino fc': 'torino',
     'monza': 'monza',
@@ -55,34 +58,69 @@ const normalizeTeamName = (name: string): string => {
     'us lecce': 'lecce',
     'verona': 'verona',
     'hellas verona': 'verona',
-    'hellas verona fc': 'verona',
     'cagliari': 'cagliari',
-    'cagliari calcio': 'cagliari',
     'empoli': 'empoli',
-    'empoli fc': 'empoli',
     'salernitana': 'salernitana',
-    'us salernitana': 'salernitana',
-    'udinese': 'udinese',
-    'udinese calcio': 'udinese',
     'sassuolo': 'sassuolo',
-    'us sassuolo': 'sassuolo',
     'genoa': 'genoa',
-    'genoa cfc': 'genoa',
     'frosinone': 'frosinone',
-    'frosinone calcio': 'frosinone',
     'parma': 'parma',
-    'parma calcio 1913': 'parma',
     'como': 'como',
-    'como 1907': 'como',
     'venezia': 'venezia',
-    'venezia fc': 'venezia'
+
+    // CHAMPIONS LEAGUE / EUROPE - BIG TEAMS MAPPING
+    'real madrid': 'realmadrid',
+    'real madrid cf': 'realmadrid',
+    'barcelona': 'barcelona',
+    'fc barcelona': 'barcelona',
+    'atlético madrid': 'atleticomadrid',
+    'atletico madrid': 'atleticomadrid',
+    'girona': 'girona',
+    'manchester city': 'manchestercity',
+    'man city': 'manchestercity',
+    'arsenal': 'arsenal',
+    'arsenal fc': 'arsenal',
+    'liverpool': 'liverpool',
+    'liverpool fc': 'liverpool',
+    'aston villa': 'astonvilla',
+    'bayern munich': 'bayernmunchen',
+    'bayern munchen': 'bayernmunchen',
+    'fc bayern munchen': 'bayernmunchen',
+    'borussia dortmund': 'borussiadortmund',
+    'bvb': 'borussiadortmund',
+    'bayer leverkusen': 'bayerleverkusen',
+    'bayer 04 leverkusen': 'bayerleverkusen',
+    'leipzig': 'rbleipzig',
+    'rb leipzig': 'rbleipzig',
+    'stuttgart': 'vfbstuttgart',
+    'psg': 'parissaintgermain',
+    'paris saint-germain': 'parissaintgermain',
+    'paris sg': 'parissaintgermain',
+    'monaco': 'asmonaco',
+    'lille': 'lilleosc',
+    'brest': 'stadebrestois29',
+    'benfica': 'slbenfica',
+    'sporting cp': 'sportingcp',
+    'sporting lisbon': 'sportingcp',
+    'psv': 'psveindhoven',
+    'feyenoord': 'feyenoordrotterdam',
+    'celtic': 'celtic',
+    'club brugge': 'clubbruggekv',
+    'shakhtar donetsk': 'shakhtardonetsk',
+    'red star belgrade': 'crvenazvezda',
+    'young boys': 'bscyoungboys',
+    'salzburg': 'rbsalzburg',
+    'sparta prague': 'acspartapraha',
+    'sturm graz': 'sksturmgraz',
+    'dinamo zagreb': 'gnkdinamozagreb',
+    'slovan bratislava': 'skslovanbratislava'
   };
 
   // First check direct mapping
   if (mappings[n]) return mappings[n];
   
   // Generic cleanup
-  n = n.replace(/fc|ac|as|ssc|calcio|football club|sportiva|u\.s\.|c\.f\.|1907|1913/g, '')
+  n = n.replace(/fc|ac|as|ssc|calcio|football club|sportiva|u\.s\.|c\.f\.|1907|1913|04|b\.c\.|s\.s\.|g\.n\.k\.|k\.v\.|c\.d\.|s\.l\.|o\.s\.c\.|c\.p\./g, '')
        .replace(/\s+/g, '')
        .replace(/[^a-z]/g, '')
        .trim();
@@ -215,7 +253,7 @@ export const StorageService = {
       // Sort descending by date
       teamMatches.sort((a, b) => new Date(b.utcDate).getTime() - new Date(a.utcDate).getTime());
 
-      if (teamMatches.length === 0) return "Nessuna partita recente trovata.";
+      if (teamMatches.length === 0) return "Nessuna partita recente trovata (Verificare Competizione).";
 
       return teamMatches.slice(0, limit).map(m => {
           const isHome = normalizeTeamName(m.homeTeam.name).includes(normTeam) || normalizeTeamName(m.homeTeam.name) === normTeam;
@@ -258,7 +296,7 @@ export const StorageService = {
       context += `Gol: ${homeStat.goalsFor} Fatti, ${homeStat.goalsAgainst} Subiti.\n`;
       context += `ULTIME 5 PARTITE DETTAGLIATE (Fondamentale per analisi forma):\n${StorageService.getDetailedLastMatches(homeTeamName)}\n\n`;
     } else {
-      context += `SQUADRA CASA: ${homeTeamName} - Dati classifica non trovati (Verificare Sync).\n\n`;
+      context += `SQUADRA CASA: ${homeTeamName} - Dati classifica non trovati (Verificare Normalizzazione Nome).\n\n`;
     }
 
     if (awayStat) {
@@ -267,7 +305,7 @@ export const StorageService = {
       context += `Gol: ${awayStat.goalsFor} Fatti, ${awayStat.goalsAgainst} Subiti.\n`;
       context += `ULTIME 5 PARTITE DETTAGLIATE (Fondamentale per analisi forma):\n${StorageService.getDetailedLastMatches(awayTeamName)}\n\n`;
     } else {
-      context += `SQUADRA OSPITE: ${awayTeamName} - Dati classifica non trovati (Verificare Sync).\n\n`;
+      context += `SQUADRA OSPITE: ${awayTeamName} - Dati classifica non trovati (Verificare Normalizzazione Nome).\n\n`;
     }
 
     // 2. SQUADS / ROSE & SCORERS INTEGRATION
@@ -281,7 +319,7 @@ export const StorageService = {
         const normP = normalizeTeamName(playerName);
         const normT = normalizeTeamName(teamName);
         
-        // Find scorer entry that matches player AND team (to avoid duplicates or wrong attributions)
+        // Find scorer entry that matches player AND team
         const entry = scorers.find(s => {
             const sP = normalizeTeamName(s.player.name);
             const sT = normalizeTeamName(s.team.name);
@@ -298,24 +336,28 @@ export const StorageService = {
     const awaySquad = findSquad(normAway);
 
     if (homeSquad && homeSquad.squad) {
-        const players = homeSquad.squad.slice(0, 25).map(p => {
+        const players = homeSquad.squad.map(p => {
              const goals = getPlayerGoals(p.name, homeTeamName);
              const scorerTag = goals > 0 ? ` [${goals} GOL]` : '';
              return `${p.name} (${p.position})${scorerTag}`;
         }).join(', ');
         context += `ROSA COMPLETA ${homeTeamName} (con gol segnati):\n${players}\nAllenatore: ${homeSquad.coach?.name || 'N/D'}\n\n`;
+    } else {
+        context += `ROSA ${homeTeamName} non trovata. Uso dati statistici generali.\n\n`;
     }
 
     if (awaySquad && awaySquad.squad) {
-        const players = awaySquad.squad.slice(0, 25).map(p => {
+        const players = awaySquad.squad.map(p => {
              const goals = getPlayerGoals(p.name, awayTeamName);
              const scorerTag = goals > 0 ? ` [${goals} GOL]` : '';
              return `${p.name} (${p.position})${scorerTag}`;
         }).join(', ');
         context += `ROSA COMPLETA ${awayTeamName} (con gol segnati):\n${players}\nAllenatore: ${awaySquad.coach?.name || 'N/D'}\n\n`;
+    } else {
+        context += `ROSA ${awayTeamName} non trovata. Uso dati statistici generali.\n\n`;
     }
 
-    // 3. SPECIFIC TEAM TOP SCORERS LIST
+    // 3. SPECIFIC TEAM TOP SCORERS LIST (Fallback/Duplicate check)
     const getTeamTopScorers = (teamName: string) => {
         const normT = normalizeTeamName(teamName);
         return scorers.filter(s => {
@@ -328,13 +370,13 @@ export const StorageService = {
     const awayTopScorers = getTeamTopScorers(awayTeamName);
 
     if (homeTopScorers.length > 0) {
-        context += `TOP MARCATORI ${homeTeamName}:\n`;
+        context += `TOP MARCATORI UFFICIALI ${homeTeamName}:\n`;
         homeTopScorers.forEach(s => context += `- ${s.player.name}: ${s.goals} Gol\n`);
         context += `\n`;
     }
     
     if (awayTopScorers.length > 0) {
-        context += `TOP MARCATORI ${awayTeamName}:\n`;
+        context += `TOP MARCATORI UFFICIALI ${awayTeamName}:\n`;
         awayTopScorers.forEach(s => context += `- ${s.player.name}: ${s.goals} Gol\n`);
         context += `\n`;
     }
@@ -354,10 +396,10 @@ export const StorageService = {
         context += `${m.utcDate.split('T')[0]}: ${m.homeTeam.name} ${m.score.fullTime.home} - ${m.score.fullTime.away} ${m.awayTeam.name}\n`;
       });
     } else {
-      context += `Nessun precedente diretto registrato in questa stagione.\n`;
+      context += `Nessun precedente diretto registrato in questa competizione (Stagione Corrente).\n`;
     }
     
-    // 5. Medical Report & Tactical News (Mining)
+    // 5. Medical Report & Tactical News
     const medKeywords = ['infortunio', 'squalifica', 'out', 'indisponibile', 'non convocato', 'salta', 'stop', 'lesione', 'problema muscolare'];
     
     const filterNews = (normTeam: string) => news.filter(n => {

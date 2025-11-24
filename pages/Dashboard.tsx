@@ -1,4 +1,5 @@
 
+
 import React, { useEffect, useState } from 'react';
 import { MatchCard } from '../components/MatchCard';
 import { OddsService } from '../services/odds';
@@ -6,7 +7,7 @@ import { FootballDataService } from '../services/footballdata';
 import { StorageService } from '../services/storage';
 import { NewsService, NewsArticle } from '../services/news';
 import { ProcessedMatch } from '../types';
-import { RefreshCw, AlertTriangle, CalendarDays, Settings as SettingsIcon, DownloadCloud, BarChart3, Megaphone } from 'lucide-react';
+import { RefreshCw, AlertTriangle, CalendarDays, Settings as SettingsIcon, DownloadCloud, BarChart3, Megaphone, Trophy, Shield, Crown } from 'lucide-react';
 import { Button } from '../components/Button';
 import { LeagueStatsModal } from '../components/LeagueStatsModal';
 import { TheLock } from '../components/TheLock';
@@ -19,6 +20,8 @@ interface DashboardProps {
   onAddToSlip: (match: string, selection: string, odds: number) => void;
 }
 
+type LeagueCode = 'SA' | 'CL';
+
 export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footballKey, onNavigateSettings, onAddToSlip }) => {
   const [matches, setMatches] = useState<ProcessedMatch[]>([]);
   const [loading, setLoading] = useState(false);
@@ -26,61 +29,97 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
   const [dateRange, setDateRange] = useState<string>('');
   const [isSyncingHistory, setIsSyncingHistory] = useState(false);
   const [showLeagueStats, setShowLeagueStats] = useState(false);
-  const [dropAlerts, setDropAlerts] = useState<{[key:string]: number}>({}); // Map matchId -> percent drop
+  const [dropAlerts, setDropAlerts] = useState<{[key:string]: number}>({});
+  
+  // LEAGUE STATE
+  const [activeLeague, setActiveLeague] = useState<LeagueCode>('SA');
   
   // News State
   const [news, setNews] = useState<NewsArticle[]>([]);
   const [showNews, setShowNews] = useState(false);
 
-  // AUTO-SYNC LOGIC
-  useEffect(() => {
-    const checkAutoSync = async () => {
-      if (!footballKey) return;
+  // THEME COLORS HELPERS
+  const isChampions = activeLeague === 'CL';
+  const themeColor = isChampions ? 'blue' : 'redzone'; // Base color name
+  const themeBg = isChampions ? 'bg-blue-600' : 'bg-redzone-600';
+  const themeText = isChampions ? 'text-blue-500' : 'text-redzone-500';
+  const themeBorder = isChampions ? 'border-blue-600' : 'border-redzone-600';
 
-      const { lastSync } = StorageService.getFootballData();
+  // Helper to get codes based on active league
+  const getLeagueConfig = (league: LeagueCode) => {
+      if (league === 'CL') {
+          return {
+              oddsKey: 'soccer_uefa_champs_league',
+              footballDataKey: 'CL',
+              label: 'Champions League',
+              newsTopic: 'Champions League'
+          };
+      }
+      return {
+          oddsKey: 'soccer_italy_serie_a',
+          footballDataKey: 'SA',
+          label: 'Serie A',
+          newsTopic: 'Serie A'
+      };
+  };
+
+  // SMART SYNC & CONTEXT SWITCHING
+  const refreshContextData = async (force: boolean = false) => {
+      if (!footballKey) return;
+      
+      const config = getLeagueConfig(activeLeague);
+      const { lastSync } = StorageService.getFootballData(); 
       const twelveHours = 12 * 60 * 60 * 1000;
       
-      // Se i dati sono vecchi di 12 ore, aggiorna in background
-      if (Date.now() - lastSync > twelveHours) {
-        console.log("Smart Sync: Aggiornamento dati storici in corso...");
+      if (force || Date.now() - lastSync > twelveHours) {
+        console.log(`Smart Sync: Scaricando dati contesto per ${config.label}...`);
         setIsSyncingHistory(true);
         try {
-          const standings = await FootballDataService.fetchStandings(footballKey);
-          const matches = await FootballDataService.fetchSeasonMatches(footballKey);
-          const scorers = await FootballDataService.fetchTopScorers(footballKey);
-          StorageService.saveFootballData(standings, matches, scorers);
-          console.log("Smart Sync: Completato.");
+          // DOWNLOAD ALL DATA INCLUDING SQUADS (TEAMS)
+          const [standings, matchesHist, scorers, squads] = await Promise.all([
+             FootballDataService.fetchStandings(footballKey, config.footballDataKey),
+             FootballDataService.fetchSeasonMatches(footballKey, config.footballDataKey),
+             FootballDataService.fetchTopScorers(footballKey, config.footballDataKey),
+             FootballDataService.fetchTeams(footballKey, config.footballDataKey)
+          ]);
+          
+          StorageService.saveFootballData(standings, matchesHist, scorers, squads);
+          console.log("Smart Sync: Contesto Aggiornato (inclusi Rose/Squads).");
         } catch (e) {
           console.error("Smart Sync Failed:", e);
         } finally {
           setIsSyncingHistory(false);
         }
       }
-    };
+  };
 
-    checkAutoSync();
-  }, [footballKey]);
-
-  // NEWS FETCH LOGIC
+  // NEWS FETCH LOGIC - Updates when Active League Changes
   useEffect(() => {
       const { newsKey } = StorageService.getKeys();
       if (newsKey) {
-          NewsService.fetchSerieANews(newsKey).then(articles => {
+          const config = getLeagueConfig(activeLeague);
+          NewsService.fetchNews(newsKey, config.newsTopic).then(articles => {
               if (articles.length > 0) {
                   setNews(articles);
                   setShowNews(true);
               }
           });
       }
-  }, []);
+  }, [activeLeague]);
 
   const loadMatches = async () => {
     if (!oddsKey) return;
     setLoading(true);
     setError(null);
+    setMatches([]); 
+
     try {
-      const allMatches = await OddsService.fetchMatches(oddsKey);
+      const config = getLeagueConfig(activeLeague);
       
+      const allMatches = await OddsService.fetchMatches(oddsKey, config.oddsKey);
+      
+      refreshContextData(true); 
+
       if (allMatches.length > 0) {
         // TRACK OPENING ODDS
         const openingOdds = StorageService.trackOpeningOdds(allMatches);
@@ -90,11 +129,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
         allMatches.forEach(m => {
             const initial = openingOdds[m.id];
             if (initial) {
-                // Check Home Drop
                 if (m.odds.home < initial.home * 0.95) {
                     newDropAlerts[m.id] = Math.round(((initial.home - m.odds.home) / initial.home) * 100);
                 }
-                // Check Away Drop
                 else if (m.odds.away < initial.away * 0.95) {
                      newDropAlerts[m.id] = Math.round(((initial.away - m.odds.away) / initial.away) * 100);
                 }
@@ -104,7 +141,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
 
         const firstMatchDate = new Date(allMatches[0].startTime);
         
-        const windowDays = 5;
+        const windowDays = activeLeague === 'CL' ? 14 : 6;
         const cutoffDate = new Date(firstMatchDate);
         cutoffDate.setDate(cutoffDate.getDate() + windowDays);
 
@@ -115,9 +152,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
 
         setMatches(nextMatchdayMatches);
 
-        const startStr = firstMatchDate.toLocaleDateString('it-IT', { day: 'numeric', month: 'short'});
-        const endStr = new Date(nextMatchdayMatches[nextMatchdayMatches.length - 1].startTime).toLocaleDateString('it-IT', { day: 'numeric', month: 'short'});
-        setDateRange(`${startStr} - ${endStr}`);
+        if (nextMatchdayMatches.length > 0) {
+             const startStr = firstMatchDate.toLocaleDateString('it-IT', { day: 'numeric', month: 'short'});
+             const endStr = new Date(nextMatchdayMatches[nextMatchdayMatches.length - 1].startTime).toLocaleDateString('it-IT', { day: 'numeric', month: 'short'});
+             setDateRange(`${startStr} - ${endStr}`);
+        } else {
+             setDateRange('');
+        }
 
       } else {
         setMatches([]);
@@ -136,7 +177,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
     if (oddsKey) {
       loadMatches();
     }
-  }, [oddsKey]);
+  }, [oddsKey, activeLeague]);
 
   if (!oddsKey) {
     return (
@@ -158,16 +199,30 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
   return (
     <div className="space-y-6 pb-24">
       
+      {/* Stefanicchio Welcome */}
+      <div className="flex items-center justify-between mb-2">
+         <div className="flex items-center gap-2">
+             <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-redzone-600 to-yellow-500 flex items-center justify-center text-white font-bold text-sm shadow-lg">
+                 S
+             </div>
+             <div>
+                 <div className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest">Bentornato</div>
+                 <h1 className="text-lg font-black text-white leading-none">Stefanicchio</h1>
+             </div>
+         </div>
+         <Crown size={20} className="text-yellow-500 animate-pulse" />
+      </div>
+
       {/* BREAKING NEWS TICKER */}
       {showNews && news.length > 0 && (
-          <div className="bg-redzone-900/20 border-y border-redzone-900/50 -mx-4 mb-4 overflow-hidden relative h-10 flex items-center shadow-lg">
-             <div className="absolute left-0 z-10 bg-darkbg px-3 h-full flex items-center border-r border-redzone-900/50 shadow-[5px_0_15px_rgba(0,0,0,0.8)]">
-                <Megaphone size={16} className="text-redzone-500 animate-pulse" />
+          <div className={`${isChampions ? 'bg-blue-900/20 border-blue-900/50' : 'bg-redzone-900/20 border-redzone-900/50'} border-y -mx-4 mb-4 overflow-hidden relative h-10 flex items-center shadow-lg transition-colors duration-500`}>
+             <div className={`absolute left-0 z-10 bg-darkbg px-3 h-full flex items-center border-r ${isChampions ? 'border-blue-900/50' : 'border-redzone-900/50'} shadow-[5px_0_15px_rgba(0,0,0,0.8)]`}>
+                <Megaphone size={16} className={`${isChampions ? 'text-blue-500' : 'text-redzone-500'} animate-pulse`} />
              </div>
              <div className="whitespace-nowrap animate-marquee flex items-center gap-12 pl-4 hover:pause cursor-default">
                 {news.map((item, idx) => (
                    <span key={idx} className="text-xs font-bold text-white uppercase tracking-wide inline-flex items-center">
-                      <span className="text-redzone-500 mr-2 text-sm">🚨</span>
+                      <span className={`${isChampions ? 'text-blue-500' : 'text-redzone-500'} mr-2 text-sm`}>🚨</span>
                       {item.title}
                    </span>
                 ))}
@@ -175,11 +230,27 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
           </div>
       )}
 
+      {/* LEAGUE SELECTOR TABS */}
+      <div className="grid grid-cols-2 gap-2 bg-neutral-900 p-1 rounded-xl border border-neutral-800">
+          <button 
+             onClick={() => setActiveLeague('SA')}
+             className={`flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-bold transition-all ${activeLeague === 'SA' ? 'bg-cardbg text-white shadow-lg border border-redzone-600' : 'text-neutral-500 hover:text-neutral-300'}`}
+          >
+             <Shield size={16} className={activeLeague === 'SA' ? 'text-redzone-500' : ''} /> SERIE A
+          </button>
+          <button 
+             onClick={() => setActiveLeague('CL')}
+             className={`flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-bold transition-all ${activeLeague === 'CL' ? 'bg-cardbg text-white shadow-lg border border-blue-500' : 'text-neutral-500 hover:text-neutral-300'}`}
+          >
+             <Trophy size={16} className={activeLeague === 'CL' ? 'text-blue-500' : ''} /> CHAMPIONS
+          </button>
+      </div>
+
       <div className="flex flex-col gap-4 border-b border-neutral-800 pb-4">
         <div className="flex justify-between items-center">
            <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2 text-white">
-            <span className="w-2 h-8 bg-redzone-600 rounded-sm block shadow-[0_0_10px_#dc2626]"></span>
-            PROSSIMO TURNO
+            <span className={`w-2 h-8 rounded-sm block shadow-[0_0_10px] ${isChampions ? 'bg-blue-600 shadow-blue-600/50' : 'bg-redzone-600 shadow-red-600/50'}`}></span>
+            {activeLeague === 'CL' ? 'CHAMPIONS LEAGUE' : 'SERIE A'}
           </h2>
            <button 
             onClick={loadMatches} 
@@ -193,14 +264,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
            {dateRange && (
             <div className="text-xs text-neutral-400 font-mono flex items-center gap-1">
               <CalendarDays size={12} /> {dateRange}
-              {isSyncingHistory && <span className="text-yellow-500 flex items-center gap-1 ml-2"><DownloadCloud size={10} className="animate-bounce"/> Sync Dati...</span>}
+              {isSyncingHistory && <span className={`${isChampions ? 'text-blue-400' : 'text-yellow-500'} flex items-center gap-1 ml-2`}><DownloadCloud size={10} className="animate-bounce"/> Scarico Dati...</span>}
             </div>
           )}
           <button 
             onClick={() => setShowLeagueStats(true)}
             className="text-xs font-bold bg-neutral-800 hover:bg-neutral-700 text-white px-3 py-1.5 rounded border border-neutral-700 flex items-center gap-2 transition-colors"
           >
-            <BarChart3 size={14} /> CLASSIFICA SERIE A
+            <BarChart3 size={14} /> DATI {activeLeague}
           </button>
         </div>
       </div>
@@ -219,8 +290,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
 
       {loading && !matches.length ? (
         <div className="flex flex-col items-center justify-center py-20 gap-4">
-           <div className="w-8 h-8 border-4 border-redzone-600 border-t-transparent rounded-full animate-spin"></div>
-           <div className="text-neutral-500 text-sm animate-pulse">Analisi mercato in corso...</div>
+           <div className={`w-8 h-8 border-4 border-t-transparent rounded-full animate-spin ${isChampions ? 'border-blue-500' : 'border-redzone-600'}`}></div>
+           <div className="text-neutral-500 text-sm animate-pulse">Analisi mercato {activeLeague}...</div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
@@ -229,6 +300,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
                 key={match.id} 
                 match={match} 
                 geminiKey={geminiKey} 
+                league={activeLeague} // Pass league info for styling
                 onDeleteAnalysis={() => {
                     StorageService.deleteAnalysis(match.id);
                 }}
@@ -239,7 +311,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
           
           {!loading && matches.length === 0 && !error && (
             <div className="col-span-full text-center py-16 bg-neutral-900/30 rounded-xl border border-dashed border-neutral-800">
-              <p className="text-neutral-500 font-medium">Nessuna partita trovata nel breve periodo.</p>
+              <p className="text-neutral-500 font-medium">Nessuna partita {activeLeague === 'CL' ? 'di Champions' : 'di Serie A'} trovata a breve.</p>
             </div>
           )}
         </div>

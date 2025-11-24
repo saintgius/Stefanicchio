@@ -12,7 +12,8 @@ export const GeminiService = {
     userFavoriteTeam: string,
     richContext: string,
     weatherContext: string | null,
-    newsContext: string | null // NEW PARAMETER FOR NEWS
+    newsContext: string | null,
+    competition: string = 'Serie A' // NEW PARAMETER
   ): Promise<AnalysisResult> => {
     
     const ai = new GoogleGenAI({ apiKey });
@@ -38,6 +39,9 @@ export const GeminiService = {
         tactical_insight: { type: Type.STRING, description: "Analisi Tattica Approfondita (min 150 parole). Usa i NOMI DEI GIOCATORI reali presenti nelle ROSE fornite nel contesto. Cita duelli specifici e caratteristiche tecniche." },
         key_duels: { type: Type.STRING, description: "Duelli chiave (es. Attaccante X vs Difensore Y)." },
         
+        manager_duel: { type: Type.STRING, description: "Analisi breve dello scontro tra allenatori (nomi, moduli e chi ha la meglio tatticamente)." },
+        stadium_atmosphere: { type: Type.STRING, description: "Analisi breve del fattore campo (tifosi, stadio caldo, pressione)." },
+
         best_value_market: { type: Type.STRING, description: "Mercato con valore." },
         market_reasoning: { type: Type.STRING, description: "Logica matematica." },
         max_drawdown: { type: Type.INTEGER, description: "Max perdite consecutive simulate." },
@@ -46,26 +50,47 @@ export const GeminiService = {
         unavailable_players: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Lista di nomi di giocatori infortunati/squalificati estratti dalle NEWS/REPORT MEDICO. Se non citati, lascia vuoto." },
         key_players_analysis: { type: Type.STRING, description: "Analisi breve (max 30 parole) su chi è in forma, basandoti sui tag [TOP SCORER] e sulle news di formazione." }
       },
-      required: ["prediction", "risk_level", "recommended_bet", "reasoning", "confidence_score", "exact_score", "bet_1x2", "risky_bet", "risky_reasoning", "tactical_insight", "key_duels", "best_value_market", "market_reasoning", "max_drawdown"]
+      required: ["prediction", "risk_level", "recommended_bet", "reasoning", "confidence_score", "exact_score", "bet_1x2", "risky_bet", "risky_reasoning", "tactical_insight", "key_duels", "manager_duel", "stadium_atmosphere", "best_value_market", "market_reasoning", "max_drawdown"]
     };
 
-    let prompt = `Analizza ${homeTeam} vs ${awayTeam}. 
+    let competitionInstruction = "";
+    if (competition.includes('Champions') || competition.includes('CL')) {
+        competitionInstruction = `
+        IMPORTANTE - CONTESTO CHAMPIONS LEAGUE (NOTTI MAGICHE):
+        1. Questa è l'Elite. Le squadre giocano diversamente che in campionato.
+        2. "DNA EUROPEO": Squadre come Real Madrid, Milan, Liverpool hanno un bonus mentale enorme in questa competizione.
+        3. FATTORE CAMPO: Giocare ad Anfield, San Siro, Westfalenstadion cambia le partite. Consideralo.
+        4. MOTIVAZIONI: Chi deve vincere per forza? Chi è già qualificato?
+        5. GESTIONE ALLENATORI: I top coach preparano queste gare sui dettagli.
+        `;
+    } else {
+        competitionInstruction = `
+        IMPORTANTE - CONTESTO SERIE A (TATTICISMO):
+        1. Il campionato italiano è scacchi. Molta tattica, difese chiuse.
+        2. Considera la stanchezza post-coppe se hanno giocato in settimana.
+        3. Scontri salvezza o alta classifica? La paura di perdere spesso porta al pareggio (X).
+        `;
+    }
+
+    let prompt = `Analizza ${homeTeam} vs ${awayTeam} (${competition}). 
     Quote: 1(${odds.home}), X(${odds.draw}), 2(${odds.away}).
     
+    ${competitionInstruction}
+
     === CONTESTO UFFICIALE E REALE ===
     ${richContext}
     
-    ${weatherContext ? `=== CONDIZIONI METEO PREVISTE ===\n${weatherContext}\nConsidera come questo meteo influenza il gioco (es. Pioggia = campo veloce/pesante, Vento = problemi lanci lunghi).` : ''}
+    ${weatherContext ? `=== CONDIZIONI METEO PREVISTE ===\n${weatherContext}\nConsidera come questo meteo influenza il gioco.` : ''}
     
     ${newsContext ? `=== BREAKING NEWS (FONDAMENTALE) ===\n${newsContext}\nUsa queste notizie (Infortuni, cambi formazione, voci spogliatoio) per correggere l'analisi statistica.` : ''}
     ==================================
     
-    ISTRUZIONI CRITICHE:
+    ISTRUZIONI CRITICHE PER L'ANALISI:
     1. NON ALLUCINARE: Usa SOLO i dati forniti.
-    2. SQUADS & PLAYERS: Nel contesto sopra hai le ROSE COMPLETE. I Top Scorer sono marcati con [TOP SCORER]. Usale!
-    3. MEDICAL REPORT: Se nella sezione 'REPORT MEDICO' o 'NEWS' ci sono nomi di giocatori indisponibili, estraili nel campo 'unavailable_players'.
-    4. KEY PLAYERS: Identifica chi può decidere il match (es. i Top Scorer o chi è citato in forma nelle news).
-    5. Cerca valore matematico.
+    2. SQUADS & PLAYERS: Nel contesto sopra hai le ROSE COMPLETE.
+    3. MEDICAL REPORT: Estrai infortuni reali.
+    4. DUELLO ALLENATORI: Analizza lo scontro in panchina.
+    5. FATTORE STADIO: Quanto influirà il pubblico?
     6. Rispondi in ITALIANO.
     `;
 
@@ -80,7 +105,7 @@ export const GeminiService = {
         config: {
           responseMimeType: "application/json",
           responseSchema: schema,
-          systemInstruction: "Sei un analista di calcio professionista. Basi le tue previsioni ESCLUSIVAMENTE sui dati statistici, sulle ROSE e sulle NEWS fornite. Se ci sono notizie importanti (infortuni), usale per modificare il pronostico statistico.",
+          systemInstruction: "Sei un analista di calcio professionista specializzato in Betting Exchange e Analisi Tattica Avanzata. Non dare risposte banali. Analizza i matchup tattici.",
         }
       });
 
@@ -102,6 +127,8 @@ export const GeminiService = {
         risky_reasoning: "N/A",
         tactical_insight: "Si è verificato un errore durante l'elaborazione dell'analisi AI o i dati di contesto erano insufficienti.",
         key_duels: "N/A",
+        manager_duel: "N/A",
+        stadium_atmosphere: "N/A",
         best_value_market: "N/A",
         market_reasoning: "N/A",
         max_drawdown: 0,

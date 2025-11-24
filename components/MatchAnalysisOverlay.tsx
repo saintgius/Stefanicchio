@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { AnalysisResult, ProcessedMatch, RiskLevel, FootballDataMatch, WeatherData } from '../types';
 import { StorageService } from '../services/storage';
-import { X, TrendingUp, AlertOctagon, ShieldAlert, BrainCircuit, History, Zap, Swords, Percent, DollarSign, BarChart3, FileText, CloudRain, Wind, Sun, Cloud, CloudSnow, Thermometer, Crown, Ambulance } from 'lucide-react';
+import { X, TrendingUp, AlertOctagon, ShieldAlert, BrainCircuit, History, Zap, Swords, Percent, DollarSign, BarChart3, FileText, CloudRain, Wind, Sun, Cloud, CloudSnow, Thermometer, Crown, Ambulance, Megaphone, UserCog } from 'lucide-react';
 import { Button } from './Button';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip } from 'recharts';
 
@@ -14,15 +14,21 @@ interface MatchAnalysisOverlayProps {
   onDelete: () => void;
   onAddToSlip: (match: string, selection: string, odds: number) => void;
   weather: WeatherData | null;
+  league?: 'SA' | 'CL'; // NEW PROP
 }
 
-export const MatchAnalysisOverlay: React.FC<MatchAnalysisOverlayProps> = ({ match, analysis, onClose, onDelete, onAddToSlip, weather }) => {
+export const MatchAnalysisOverlay: React.FC<MatchAnalysisOverlayProps> = ({ match, analysis, onClose, onDelete, onAddToSlip, weather, league = 'SA' }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'stats' | 'advanced'>('overview');
   const [homeForm, setHomeForm] = useState<string[]>([]);
   const [awayForm, setAwayForm] = useState<string[]>([]);
   const [homeRank, setHomeRank] = useState<number | null>(null);
   const [awayRank, setAwayRank] = useState<number | null>(null);
   const [h2hMatches, setH2hMatches] = useState<FootballDataMatch[]>([]);
+
+  const isChampions = league === 'CL';
+  const themeText = isChampions ? 'text-blue-500' : 'text-redzone-600';
+  const themeBorder = isChampions ? 'border-blue-600' : 'border-redzone-600';
+  const themeAccent = isChampions ? 'bg-blue-600' : 'bg-redzone-600';
 
   useEffect(() => {
     setHomeForm(StorageService.getFormArray(match.homeTeam));
@@ -47,7 +53,6 @@ export const MatchAnalysisOverlay: React.FC<MatchAnalysisOverlayProps> = ({ matc
     }
   };
 
-  // Helper per tradurre W/D/L in V/P/S
   const getFormBadge = (result: string) => {
     if (result === 'W') return { label: 'V', color: 'bg-green-600 text-white' };
     if (result === 'D') return { label: 'P', color: 'bg-neutral-600 text-gray-300' };
@@ -109,9 +114,9 @@ export const MatchAnalysisOverlay: React.FC<MatchAnalysisOverlayProps> = ({ matc
       <div className="sticky top-0 bg-cardbg/95 backdrop-blur border-b border-neutral-800 p-4 flex justify-between items-center z-20 shadow-md">
         <div>
           <h2 className="font-black text-lg leading-none uppercase tracking-tight">
-            WAR ROOM <span className="text-redzone-600">AI</span>
+            WAR ROOM <span className={themeText}>AI</span>
           </h2>
-          <p className="text-xs text-neutral-500 font-mono mt-1">{match.homeTeam} vs {match.awayTeam}</p>
+          <p className="text-xs text-neutral-500 font-mono mt-1">{match.homeTeam} vs {match.awayTeam} <span className="opacity-50 mx-1">|</span> {isChampions ? 'UCL' : 'SA'}</p>
         </div>
         <div className="flex gap-2">
           <button onClick={onClose} className="bg-neutral-800 p-2 rounded-full hover:bg-neutral-700 transition-colors text-white">
@@ -124,19 +129,19 @@ export const MatchAnalysisOverlay: React.FC<MatchAnalysisOverlayProps> = ({ matc
       <div className="flex border-b border-neutral-800 bg-neutral-900 sticky top-[70px] z-10">
         <button 
           onClick={() => setActiveTab('overview')}
-          className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors ${activeTab === 'overview' ? 'border-redzone-600 text-white' : 'border-transparent text-neutral-500'}`}
+          className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors ${activeTab === 'overview' ? `${themeBorder} text-white` : 'border-transparent text-neutral-500'}`}
         >
           Analisi
         </button>
         <button 
           onClick={() => setActiveTab('stats')}
-          className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors ${activeTab === 'stats' ? 'border-redzone-600 text-white' : 'border-transparent text-neutral-500'}`}
+          className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors ${activeTab === 'stats' ? `${themeBorder} text-white` : 'border-transparent text-neutral-500'}`}
         >
           Forma
         </button>
         <button 
           onClick={() => setActiveTab('advanced')}
-          className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors ${activeTab === 'advanced' ? 'border-redzone-600 text-white' : 'border-transparent text-neutral-500'}`}
+          className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors ${activeTab === 'advanced' ? `${themeBorder} text-white` : 'border-transparent text-neutral-500'}`}
         >
           Pronostici
         </button>
@@ -179,7 +184,7 @@ export const MatchAnalysisOverlay: React.FC<MatchAnalysisOverlayProps> = ({ matc
               
               <div className="relative z-10">
                   <div className="flex justify-between items-start mb-4">
-                    <span className="bg-redzone-900/30 text-redzone-500 border border-redzone-900/50 px-3 py-1 rounded text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+                    <span className={`${isChampions ? 'bg-blue-900/30 text-blue-500 border-blue-900/50' : 'bg-redzone-900/30 text-redzone-500 border-redzone-900/50'} border px-3 py-1 rounded text-xs font-bold uppercase tracking-wider flex items-center gap-2`}>
                       <Zap size={12} /> Consigliata
                     </span>
                     <span className={`font-mono font-bold ${getRiskColor(analysis.risk_level)} flex items-center gap-2 text-xs`}>
@@ -198,7 +203,7 @@ export const MatchAnalysisOverlay: React.FC<MatchAnalysisOverlayProps> = ({ matc
                     <DollarSign size={14} /> GIOCA QUESTA (Safe)
                   </Button>
 
-                  <p className="text-neutral-300 text-sm leading-relaxed border-l-2 border-redzone-600 pl-3 font-medium">
+                  <p className={`text-neutral-300 text-sm leading-relaxed border-l-2 pl-3 font-medium ${themeBorder}`}>
                     {analysis.reasoning}
                   </p>
               </div>
@@ -238,10 +243,33 @@ export const MatchAnalysisOverlay: React.FC<MatchAnalysisOverlayProps> = ({ matc
                 </div>
             </div>
             
+            {/* NEW: MANAGER DUEL & ATMOSPHERE */}
+            {analysis.manager_duel && (
+                <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                        <UserCog size={16} className="text-purple-400" />
+                        <h3 className="text-xs font-bold text-purple-400 uppercase">Duello Allenatori</h3>
+                    </div>
+                    <p className="text-xs text-neutral-300">{analysis.manager_duel}</p>
+                </div>
+            )}
+            
+            {analysis.stadium_atmosphere && (
+                <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                        <Megaphone size={16} className={isChampions ? "text-blue-400" : "text-orange-400"} />
+                        <h3 className={`text-xs font-bold uppercase ${isChampions ? "text-blue-400" : "text-orange-400"}`}>
+                            Fattore Stadio
+                        </h3>
+                    </div>
+                    <p className="text-xs text-neutral-300">{analysis.stadium_atmosphere}</p>
+                </div>
+            )}
+
             {/* DEEP TACTICAL INSIGHT */}
             <div className="bg-cardbg border border-neutral-800 rounded-xl p-5">
                <div className="flex items-center gap-2 mb-4 pb-2 border-b border-neutral-800">
-                 <FileText size={18} className="text-blue-400" />
+                 <FileText size={18} className={isChampions ? 'text-blue-400' : 'text-red-400'} />
                  <h3 className="font-bold text-white text-sm uppercase">Analisi Tattica Profonda</h3>
                </div>
                <div className="text-sm text-neutral-300 leading-relaxed space-y-2 whitespace-pre-line">
@@ -403,7 +431,7 @@ export const MatchAnalysisOverlay: React.FC<MatchAnalysisOverlayProps> = ({ matc
 
             {/* EXACT SCORE BOARD */}
             <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-6 flex flex-col items-center justify-center relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-yellow-600 to-transparent"></div>
+                <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent ${isChampions ? 'via-blue-600' : 'via-yellow-600'} to-transparent`}></div>
                 <span className="text-[10px] font-bold uppercase text-neutral-500 mb-2 tracking-widest">Risultato Esatto</span>
                 <div className="text-5xl font-black text-white tracking-tighter neon-text">
                   {analysis.exact_score || "-:-"}

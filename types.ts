@@ -23,6 +23,10 @@ export interface AnalysisResult {
   tactical_insight: string; // Long text (>100 words)
   key_duels: string;        // "Lautaro vs Tomori"
   
+  // Stefanicchio's Exclusive Upgrades
+  manager_duel: string;     // "Inzaghi (3-5-2) vs Conte (3-4-3)"
+  stadium_atmosphere: string; // "San Siro sarà una bolgia, fattore casa decisivo"
+
   // Advanced Metrics
   best_value_market: string; 
   market_reasoning: string;

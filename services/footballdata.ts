@@ -2,16 +2,15 @@
 import { LeagueStanding, FootballDataMatch, TopScorer, TeamSquad } from '../types';
 
 const BASE_URL = 'https://api.football-data.org/v4';
-const COMPETITION_CODE = 'SA'; // Serie A
 
 // Proxy per aggirare le restrizioni CORS dei browser (fondamentale per client-side apps)
 const PROXY_URL = 'https://corsproxy.io/?';
 
 export const FootballDataService = {
   
-  fetchStandings: async (apiKey: string): Promise<LeagueStanding[]> => {
+  fetchStandings: async (apiKey: string, competitionCode: string = 'SA'): Promise<LeagueStanding[]> => {
     try {
-      const targetUrl = `${BASE_URL}/competitions/${COMPETITION_CODE}/standings`;
+      const targetUrl = `${BASE_URL}/competitions/${competitionCode}/standings`;
       // Wrappiamo l'URL con il proxy e codifichiamo i parametri
       const finalUrl = `${PROXY_URL}${encodeURIComponent(targetUrl)}`;
 
@@ -33,9 +32,9 @@ export const FootballDataService = {
     }
   },
 
-  fetchSeasonMatches: async (apiKey: string): Promise<FootballDataMatch[]> => {
+  fetchSeasonMatches: async (apiKey: string, competitionCode: string = 'SA'): Promise<FootballDataMatch[]> => {
     try {
-      const targetUrl = `${BASE_URL}/competitions/${COMPETITION_CODE}/matches?status=FINISHED`;
+      const targetUrl = `${BASE_URL}/competitions/${competitionCode}/matches?status=FINISHED`;
       const finalUrl = `${PROXY_URL}${encodeURIComponent(targetUrl)}`;
 
       const response = await fetch(finalUrl, {
@@ -55,10 +54,10 @@ export const FootballDataService = {
     }
   },
 
-  fetchTopScorers: async (apiKey: string): Promise<TopScorer[]> => {
+  fetchTopScorers: async (apiKey: string, competitionCode: string = 'SA'): Promise<TopScorer[]> => {
     try {
-      // Aumentato limit a 100 per catturare i bomber di tutte le squadre, non solo i primi 15 della lega
-      const targetUrl = `${BASE_URL}/competitions/${COMPETITION_CODE}/scorers?limit=100`;
+      // Aumentato limit a 100 per catturare i bomber di tutte le squadre
+      const targetUrl = `${BASE_URL}/competitions/${competitionCode}/scorers?limit=100`;
       const finalUrl = `${PROXY_URL}${encodeURIComponent(targetUrl)}`;
 
       const response = await fetch(finalUrl, {
@@ -78,9 +77,9 @@ export const FootballDataService = {
     }
   },
 
-  fetchTeams: async (apiKey: string): Promise<TeamSquad[]> => {
+  fetchTeams: async (apiKey: string, competitionCode: string = 'SA'): Promise<TeamSquad[]> => {
       try {
-        const targetUrl = `${BASE_URL}/competitions/${COMPETITION_CODE}/teams`;
+        const targetUrl = `${BASE_URL}/competitions/${competitionCode}/teams`;
         const finalUrl = `${PROXY_URL}${encodeURIComponent(targetUrl)}`;
   
         const response = await fetch(finalUrl, {
