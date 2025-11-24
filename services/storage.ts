@@ -12,7 +12,7 @@ const KEYS = {
   STANDINGS: 'rz_standings',
   SEASON_MATCHES: 'rz_season_matches',
   SCORERS: 'rz_scorers',
-  SQUADS: 'rz_squads', // NEW KEY
+  SQUADS: 'rz_squads',
   LAST_FOOTBALL_SYNC: 'rz_last_football_sync',
   LAST_BACKUP_DATE: 'rz_last_backup_date',
   BANKROLL: 'rz_bankroll',
@@ -25,7 +25,7 @@ const normalizeTeamName = (name: string): string => {
   if (!name) return '';
   let n = name.toLowerCase();
   
-  // Mappature specifiche note per Serie A & CHAMPIONS LEAGUE
+  // Mappature specifiche note
   const mappings: {[key: string]: string} = {
     // SERIE A
     'inter': 'inter',
@@ -68,7 +68,7 @@ const normalizeTeamName = (name: string): string => {
     'como': 'como',
     'venezia': 'venezia',
 
-    // CHAMPIONS LEAGUE / EUROPE - BIG TEAMS MAPPING
+    // CHAMPIONS / EUROPE
     'real madrid': 'realmadrid',
     'real madrid cf': 'realmadrid',
     'barcelona': 'barcelona',
@@ -116,10 +116,8 @@ const normalizeTeamName = (name: string): string => {
     'slovan bratislava': 'skslovanbratislava'
   };
 
-  // First check direct mapping
   if (mappings[n]) return mappings[n];
   
-  // Generic cleanup
   n = n.replace(/fc|ac|as|ssc|calcio|football club|sportiva|u\.s\.|c\.f\.|1907|1913|04|b\.c\.|s\.s\.|g\.n\.k\.|k\.v\.|c\.d\.|s\.l\.|o\.s\.c\.|c\.p\./g, '')
        .replace(/\s+/g, '')
        .replace(/[^a-z]/g, '')
@@ -157,7 +155,6 @@ export const StorageService = {
     return localStorage.getItem(KEYS.LAST_BACKUP_DATE);
   },
 
-  // --- BANKROLL MANAGEMENT ---
   saveBankrollSettings: (amount: number, kellyStrategy: 'aggressive' | 'moderate' | 'conservative') => {
     localStorage.setItem(KEYS.BANKROLL, JSON.stringify({ amount, strategy: kellyStrategy }));
   },
@@ -167,7 +164,6 @@ export const StorageService = {
     return data ? JSON.parse(data) : { amount: 1000, strategy: 'conservative' };
   },
 
-  // --- NEWS CACHING ---
   saveNews: (news: NewsArticle[]) => {
       localStorage.setItem(KEYS.CACHED_NEWS, JSON.stringify(news));
   },
@@ -177,7 +173,6 @@ export const StorageService = {
       return data ? JSON.parse(data) : [];
   },
 
-  // --- DROPPING ODDS TRACKING ---
   trackOpeningOdds: (matches: { id: string, odds: { home: number, draw: number, away: number } }[]) => {
     const storedData = localStorage.getItem(KEYS.OPENING_ODDS);
     const openingOdds = storedData ? JSON.parse(storedData) : {};
@@ -202,7 +197,6 @@ export const StorageService = {
     return openingOdds[matchId] || null;
   },
 
-  // --- FOOTBALL DATA MANAGEMENT ---
   saveFootballData: (standings: LeagueStanding[], matches: FootballDataMatch[], scorers: TopScorer[], squads?: TeamSquad[]) => {
     localStorage.setItem(KEYS.STANDINGS, JSON.stringify(standings));
     localStorage.setItem(KEYS.SEASON_MATCHES, JSON.stringify(matches));
@@ -236,21 +230,18 @@ export const StorageService = {
       return data ? JSON.parse(data) : [];
   },
 
-  // --- HELPERS FOR DETAILED CONTEXT ---
   getDetailedLastMatches: (teamName: string, limit: number = 5): string => {
       const matches: FootballDataMatch[] = localStorage.getItem(KEYS.SEASON_MATCHES) ? JSON.parse(localStorage.getItem(KEYS.SEASON_MATCHES) || '[]') : [];
       if (matches.length === 0) return "Dati storico partite non presenti (Eseguire Sync).";
 
       const normTeam = normalizeTeamName(teamName);
       
-      // Filter matches for this team
       const teamMatches = matches.filter(m => {
           const h = normalizeTeamName(m.homeTeam.name);
           const a = normalizeTeamName(m.awayTeam.name);
           return h === normTeam || a === normTeam || h.includes(normTeam) || a.includes(normTeam);
       });
 
-      // Sort descending by date
       teamMatches.sort((a, b) => new Date(b.utcDate).getTime() - new Date(a.utcDate).getTime());
 
       if (teamMatches.length === 0) return "Nessuna partita recente trovata (Verificare Competizione).";
@@ -268,7 +259,6 @@ export const StorageService = {
       }).join('\n');
   },
 
-  // --- CONTEXT GENERATION FOR GEMINI ---
   getMatchContext: (homeTeamName: string, awayTeamName: string): string => {
     const standings = StorageService.getStandings();
     const matches: FootballDataMatch[] = localStorage.getItem(KEYS.SEASON_MATCHES) ? JSON.parse(localStorage.getItem(KEYS.SEASON_MATCHES) || '[]') : [];
@@ -281,7 +271,20 @@ export const StorageService = {
 
     let context = `DATA ODIERNA: ${new Date().toISOString().split('T')[0]}\n\n`;
 
-    // 1. Classifica Logic
+    // --- HELPER FOR SCORERS ---
+    // Filtriamo i marcatori specifici per la squadra usando il normalizzatore
+    const getTeamOfficialScorers = (teamName: string) => {
+        const nT = normalizeTeamName(teamName);
+        return scorers.filter(s => {
+            const sTeam = normalizeTeamName(s.team.name);
+            return sTeam === nT || sTeam.includes(nT) || nT.includes(sTeam);
+        }).sort((a,b) => b.goals - a.goals); // Dal più alto al più basso
+    };
+
+    const homeRealScorers = getTeamOfficialScorers(homeTeamName);
+    const awayRealScorers = getTeamOfficialScorers(awayTeamName);
+
+    // --- 1. CLASSIFICA ---
     const findTeam = (normName: string) => standings.find(s => {
         const sNorm = normalizeTeamName(s.team.name);
         return sNorm === normName || sNorm.includes(normName) || normName.includes(sNorm);
@@ -291,98 +294,73 @@ export const StorageService = {
     const awayStat = findTeam(normAway);
 
     if (homeStat) {
-      context += `SQUADRA CASA: ${homeTeamName} (ufficiale: ${homeStat.team.name})\n`;
+      context += `SQUADRA CASA: ${homeTeamName} (Ufficiale: ${homeStat.team.name})\n`;
       context += `Classifica: ${homeStat.position}° posto, ${homeStat.points} punti.\n`;
       context += `Gol: ${homeStat.goalsFor} Fatti, ${homeStat.goalsAgainst} Subiti.\n`;
-      context += `ULTIME 5 PARTITE DETTAGLIATE (Fondamentale per analisi forma):\n${StorageService.getDetailedLastMatches(homeTeamName)}\n\n`;
+      context += `ULTIME 5 PARTITE:\n${StorageService.getDetailedLastMatches(homeTeamName)}\n`;
+      
+      // AGGIUNTA ESPLICITA MARCATORI
+      if (homeRealScorers.length > 0) {
+          context += `\n*** CANNONIERI UFFICIALI ${homeTeamName} (DA API) ***\n`;
+          homeRealScorers.slice(0, 5).forEach(s => {
+              context += `- ${s.player.name}: ${s.goals} GOL\n`;
+          });
+      }
+      context += `\n`;
     } else {
-      context += `SQUADRA CASA: ${homeTeamName} - Dati classifica non trovati (Verificare Normalizzazione Nome).\n\n`;
+      context += `SQUADRA CASA: ${homeTeamName} - Dati classifica non trovati.\n\n`;
     }
 
     if (awayStat) {
-      context += `SQUADRA OSPITE: ${awayTeamName} (ufficiale: ${awayStat.team.name})\n`;
+      context += `SQUADRA OSPITE: ${awayTeamName} (Ufficiale: ${awayStat.team.name})\n`;
       context += `Classifica: ${awayStat.position}° posto, ${awayStat.points} punti.\n`;
       context += `Gol: ${awayStat.goalsFor} Fatti, ${awayStat.goalsAgainst} Subiti.\n`;
-      context += `ULTIME 5 PARTITE DETTAGLIATE (Fondamentale per analisi forma):\n${StorageService.getDetailedLastMatches(awayTeamName)}\n\n`;
+      context += `ULTIME 5 PARTITE:\n${StorageService.getDetailedLastMatches(awayTeamName)}\n`;
+
+      // AGGIUNTA ESPLICITA MARCATORI
+      if (awayRealScorers.length > 0) {
+          context += `\n*** CANNONIERI UFFICIALI ${awayTeamName} (DA API) ***\n`;
+          awayRealScorers.slice(0, 5).forEach(s => {
+              context += `- ${s.player.name}: ${s.goals} GOL\n`;
+          });
+      }
+      context += `\n`;
     } else {
-      context += `SQUADRA OSPITE: ${awayTeamName} - Dati classifica non trovati (Verificare Normalizzazione Nome).\n\n`;
+      context += `SQUADRA OSPITE: ${awayTeamName} - Dati classifica non trovati.\n\n`;
     }
 
-    // 2. SQUADS / ROSE & SCORERS INTEGRATION
+    // --- 2. SQUADS / ROSE ---
     const findSquad = (normName: string) => squads.find(t => {
         const sNorm = normalizeTeamName(t.name);
         return sNorm === normName || sNorm.includes(normName) || normName.includes(sNorm);
     });
 
-    // Helper to get exact goals for a player from the scorers list
-    const getPlayerGoals = (playerName: string, teamName: string) => {
-        const normP = normalizeTeamName(playerName);
-        const normT = normalizeTeamName(teamName);
-        
-        // Find scorer entry that matches player AND team
-        const entry = scorers.find(s => {
-            const sP = normalizeTeamName(s.player.name);
-            const sT = normalizeTeamName(s.team.name);
-            
-            const teamMatch = sT.includes(normT) || normT.includes(sT);
-            if (!teamMatch) return false;
-            
-            return sP.includes(normP) || normP.includes(sP);
-        });
-        return entry ? entry.goals : 0;
-    };
-
     const homeSquad = findSquad(normHome);
     const awaySquad = findSquad(normAway);
 
     if (homeSquad && homeSquad.squad) {
+        context += `ROSA COMPLETA ${homeTeamName} (Lista Giocatori):\n`;
+        // Limit to likely starters/key players if list is huge, or map positions
         const players = homeSquad.squad.map(p => {
-             const goals = getPlayerGoals(p.name, homeTeamName);
-             const scorerTag = goals > 0 ? ` [${goals} GOL]` : '';
-             return `${p.name} (${p.position})${scorerTag}`;
+             // Check if this player is in the scorers list to tag him
+             const scorerData = homeRealScorers.find(s => normalizeTeamName(s.player.name) === normalizeTeamName(p.name));
+             const goalTag = scorerData ? ` [★ ${scorerData.goals} GOL]` : '';
+             return `${p.name} (${p.position})${goalTag}`;
         }).join(', ');
-        context += `ROSA COMPLETA ${homeTeamName} (con gol segnati):\n${players}\nAllenatore: ${homeSquad.coach?.name || 'N/D'}\n\n`;
-    } else {
-        context += `ROSA ${homeTeamName} non trovata. Uso dati statistici generali.\n\n`;
+        context += `${players}\n\n`;
     }
 
     if (awaySquad && awaySquad.squad) {
+        context += `ROSA COMPLETA ${awayTeamName} (Lista Giocatori):\n`;
         const players = awaySquad.squad.map(p => {
-             const goals = getPlayerGoals(p.name, awayTeamName);
-             const scorerTag = goals > 0 ? ` [${goals} GOL]` : '';
-             return `${p.name} (${p.position})${scorerTag}`;
+             const scorerData = awayRealScorers.find(s => normalizeTeamName(s.player.name) === normalizeTeamName(p.name));
+             const goalTag = scorerData ? ` [★ ${scorerData.goals} GOL]` : '';
+             return `${p.name} (${p.position})${goalTag}`;
         }).join(', ');
-        context += `ROSA COMPLETA ${awayTeamName} (con gol segnati):\n${players}\nAllenatore: ${awaySquad.coach?.name || 'N/D'}\n\n`;
-    } else {
-        context += `ROSA ${awayTeamName} non trovata. Uso dati statistici generali.\n\n`;
+        context += `${players}\n\n`;
     }
 
-    // 3. SPECIFIC TEAM TOP SCORERS LIST (Fallback/Duplicate check)
-    const getTeamTopScorers = (teamName: string) => {
-        const normT = normalizeTeamName(teamName);
-        return scorers.filter(s => {
-            const sT = normalizeTeamName(s.team.name);
-            return sT.includes(normT) || normT.includes(sT);
-        }).sort((a,b) => b.goals - a.goals).slice(0, 3);
-    };
-
-    const homeTopScorers = getTeamTopScorers(homeTeamName);
-    const awayTopScorers = getTeamTopScorers(awayTeamName);
-
-    if (homeTopScorers.length > 0) {
-        context += `TOP MARCATORI UFFICIALI ${homeTeamName}:\n`;
-        homeTopScorers.forEach(s => context += `- ${s.player.name}: ${s.goals} Gol\n`);
-        context += `\n`;
-    }
-    
-    if (awayTopScorers.length > 0) {
-        context += `TOP MARCATORI UFFICIALI ${awayTeamName}:\n`;
-        awayTopScorers.forEach(s => context += `- ${s.player.name}: ${s.goals} Gol\n`);
-        context += `\n`;
-    }
-
-
-    // 4. H2H Stagionali
+    // --- 3. H2H ---
     const h2h = matches.filter(m => {
       const mHome = normalizeTeamName(m.homeTeam.name);
       const mAway = normalizeTeamName(m.awayTeam.name);
@@ -391,22 +369,17 @@ export const StorageService = {
     });
 
     if (h2h.length > 0) {
-      context += `PRECEDENTI DIRETTI STAGIONE CORRENTE:\n`;
+      context += `PRECEDENTI DIRETTI STAGIONE:\n`;
       h2h.forEach(m => {
         context += `${m.utcDate.split('T')[0]}: ${m.homeTeam.name} ${m.score.fullTime.home} - ${m.score.fullTime.away} ${m.awayTeam.name}\n`;
       });
-    } else {
-      context += `Nessun precedente diretto registrato in questa competizione (Stagione Corrente).\n`;
     }
     
-    // 5. Medical Report & Tactical News
-    const medKeywords = ['infortunio', 'squalifica', 'out', 'indisponibile', 'non convocato', 'salta', 'stop', 'lesione', 'problema muscolare'];
-    
+    // --- 4. NEWS ---
+    const medKeywords = ['infortunio', 'squalifica', 'out', 'indisponibile', 'non convocato', 'salta', 'stop', 'lesione'];
     const filterNews = (normTeam: string) => news.filter(n => {
          const txt = (n.title + n.description).toLowerCase();
-         // Basic check if news talks about the team
          if (!txt.includes(normTeam)) return false;
-         // Check for medical keywords
          return medKeywords.some(k => txt.includes(k));
     });
 
@@ -414,16 +387,9 @@ export const StorageService = {
     const awayNews = filterNews(normAway);
 
     if (homeNews.length > 0 || awayNews.length > 0) {
-        context += `\n=== REPORT MEDICO & NEWS TATTICHE ===\n`;
-        if(homeNews.length > 0) {
-            context += `\nNOTIZIE ${homeTeamName}:\n`;
-            homeNews.forEach(n => context += `- ${n.title} (${n.publishedAt.split('T')[0]})\n`);
-        }
-        if(awayNews.length > 0) {
-            context += `\nNOTIZIE ${awayTeamName}:\n`;
-            awayNews.forEach(n => context += `- ${n.title} (${n.publishedAt.split('T')[0]})\n`);
-        }
-        context += `\n=====================================\n`;
+        context += `\n=== NEWS NOTEVOLI ===\n`;
+        if(homeNews.length > 0) homeNews.slice(0,3).forEach(n => context += `- ${n.title}\n`);
+        if(awayNews.length > 0) awayNews.slice(0,3).forEach(n => context += `- ${n.title}\n`);
     }
 
     return context;
@@ -466,7 +432,6 @@ export const StorageService = {
     return ['-','-','-','-','-'];
   },
 
-  // --- ANALYSIS CACHE ---
   getAnalysis: (matchId: string) => {
     const data = localStorage.getItem(`analysis_${matchId}`);
     return data ? JSON.parse(data) : null;
@@ -491,7 +456,6 @@ export const StorageService = {
     });
   },
 
-  // --- BETS MANAGEMENT ---
   saveBet: (bet: Omit<BetRecord, 'id' | 'profit' | 'result'>) => {
     const existingData = localStorage.getItem(KEYS.BETS);
     const stats: UserStats = existingData ? JSON.parse(existingData) : { totalWagered: 0, netProfit: 0, bets: [] };
@@ -551,7 +515,6 @@ export const StorageService = {
     const stats: UserStats = JSON.parse(existingData);
     const updatedBets = stats.bets.filter(b => b.id !== betId);
     
-    // Recalculate stats from scratch to avoid drift
     let newTotalWagered = 0;
     let newNetProfit = 0;
     
@@ -572,7 +535,6 @@ export const StorageService = {
     return newStats;
   },
 
-  // --- BACKUP SYSTEM ---
   createBackup: () => {
     const now = new Date().toISOString();
     localStorage.setItem(KEYS.LAST_BACKUP_DATE, now);
@@ -623,7 +585,6 @@ export const StorageService = {
       
       if (backup.meta?.app !== 'RedZoneBet') throw new Error("File non valido");
 
-      // CRITICAL: Clear existing data first to avoid conflicts
       localStorage.clear();
 
       if (backup.config.oddsKey) localStorage.setItem(KEYS.ODDS_API, backup.config.oddsKey);
@@ -656,7 +617,6 @@ export const StorageService = {
         });
       }
       
-      // Restore last backup date (or set to now)
       localStorage.setItem(KEYS.LAST_BACKUP_DATE, new Date().toISOString());
 
       return true;

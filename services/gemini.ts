@@ -69,51 +69,50 @@ export const GeminiService = {
     
     QUOTE: 1(${odds.home}) | X(${odds.draw}) | 2(${odds.away}).
     
-    === ISTRUZIONI CRUCIALI PER IL RISULTATO ESATTO (MATCH DNA PROFILING) ===
-    Non guardare solo il nome della lega. Guarda le SQUADRE nel CONTESTO fornito.
+    === MATCH DNA PROFILING (INTELLIGENZA ADATTIVA) ===
+    Non applicare regole fisse per la lega. Analizza lo STILE DELLE SQUADRE in campo.
     
-    1. ANALISI STILE SQUADRE (Dal contesto rose e storico):
-       - Squadre "Zemaniane" (es. Atalanta, Barcellona, City, Milan di Fonseca): Tendono all'Over e Goleada.
-       - Squadre "Ermetiche" (es. Juventus, Atletico, Inter in trasferta ostica): Tendono all'Under e vittoria di misura.
-       
-    2. ANALISI FORMA (Dal contesto "Ultime 5 partite"):
-       - La favorita segna tanto ultimamente? Se SÌ -> Prevedi goleada (3-0, 3-1, 4-0).
-       - La favorita vince ma segna poco? -> Prevedi "Corto Muso" (1-0, 2-0).
-       - La sfavorita subisce tanto? -> Se SÌ, autorizza l'Over.
+    1. STILE OFFENSIVO vs DIFENSIVO:
+       - Guarda i gol fatti e subiti nel contesto.
+       - Se due squadre segnano molto (es. Milan, Atalanta), prevedi gol anche se è Serie A.
+       - Se due squadre sono chiuse (es. Juve, Torino), rispetta l'Under.
     
-    3. COMPETIZIONE COME FATTORE PSICOLOGICO:
-       - Serie A: Tatticismo esasperato se le quote sono equilibrate (X, 1-1, 0-0).
-       - Champions: Se c'è disparità tecnica, il divario si amplia (Goleada probabile).
+    2. DISPARITÀ TECNICA:
+       - Se c'è una super favorita (quota < 1.40) E l'avversario subisce molto -> GOLEADA POSSIBILE.
+       - Se c'è una super favorita MA l'avversario difende bene -> VITTORIA STRETTA (1-0, 2-0).
        
-    4. REGOLA MATEMATICA QUOTE:
-       - Se la quota favorita è < 1.30 E la squadra segna molto -> Risultato largo obbligatorio.
-       - Se la quota favorita è > 2.00 (Match Pari) -> Risultato stretto obbligatorio (1-1, 2-1, 1-0).
+    3. CHECK COLABRODO:
+       - Controlla nelle "Ultime 5 partite" se una squadra ha subito 3+ gol di recente. Se sì, aumenta la probabilità di Over.
 
-    === LA MATRICE DEI 10 FATTORI (DEVI VALUTARLI TUTTI) ===
-    1. DISPARITÀ TECNICA: Valore rosa (vedi contesto Rose).
-    2. STATO DI FORMA: Leggi i risultati nel contesto. Chi è in crisi nera?
-    3. FATTORE CAMPO: ${homeTeam} in casa è una fortezza?
-    4. INFERMERIA: Leggi le news nel contesto. Assenze pesanti in difesa = Più Gol.
-    5. MOTIVAZIONI: Salvezza? Scudetto? Passaggio turno?
-    6. TATTICA: Scontro stili (Possesso vs Contropiede).
-    7. STORICO (H2H): Vedi contesto. Si segnano sempre o mai?
-    8. CALENDARIO: Turnover in vista?
-    9. METEO: ${weatherContext || "N/D"}. (Pioggia = Più errori = Più gol casuali o match bloccato?)
-    10. DATI GOL: Media gol fatti/subiti dalle classifiche nel contesto.
+    === REGOLA D'ORO SUI GIOCATORI (ANTI-ALLUCINAZIONE) ===
+    NEL CONTESTO TROVERAI LA SEZIONE "*** CANNONIERI UFFICIALI (DA API) ***".
+    DEVI USARE QUEI NOMI E QUEI DATI PER CITARE I GIOCATORI CHIAVE E I MARCATORI.
+    NON USARE LA TUA MEMORIA STORICA. SE IL CONTESTO DICE "ORSOLINI 10 GOL", ORSOLINI È IL PERICOLO NUMERO 1.
 
-    === CONTESTO REALE (CLASSIFICA, ROSE, NEWS, PRECEDENTI) ===
+    === LA MATRICE DEI 10 FATTORI ===
+    1. DISPARITÀ TECNICA: Valore rosa.
+    2. STATO DI FORMA: Ultime 5 gare (Vedi contesto).
+    3. FATTORE CAMPO: ${homeTeam} in casa.
+    4. INFERMERIA: Assenze chiave (Vedi news).
+    5. MOTIVAZIONI: Classifica attuale.
+    6. TATTICA: Scontro stili.
+    7. STORICO (H2H): Precedenti stagionali.
+    8. CALENDARIO: Turnover?
+    9. METEO: ${weatherContext || "N/D"}.
+    10. DATI GOL: Media gol fatti/subiti REALE.
+
+    === CONTESTO REALE (CLASSIFICA, MARCATORI, ROSE, PRECEDENTI) ===
     ${richContext}
     
     ${newsContext ? `ULTIME NEWS:\n${newsContext}` : ''}
     
     COMPITI FINALI:
-    - Sii specifico. "Vittoria Inter" non basta. "Inter vince dominando sulle fasce" è meglio.
-    - Se prevedi un risultato alto (es. 4-1), DEVE esserci una giustificazione nei dati (es. difesa avversaria disastrosa).
-    - Se prevedi un risultato basso (es. 0-0), DEVE esserci una giustificazione tattica (es. due difese top).
+    - Sii specifico. Usa i nomi dei marcatori forniti nel contesto.
+    - Se prevedi un risultato alto, giustificalo con i dati difensivi del contesto.
     `;
 
     if (isFavoriteInvolved) {
-        prompt += `\nNOTA: L'utente tifa ${userFavoriteTeam}. Sii brutale e onesto, non illuderlo.`;
+        prompt += `\nNOTA: L'utente tifa ${userFavoriteTeam}. Sii brutale e onesto.`;
     }
 
     try {
@@ -123,7 +122,7 @@ export const GeminiService = {
         config: {
           responseMimeType: "application/json",
           responseSchema: schema,
-          systemInstruction: "Sei un analista calcistico tattico. Il tuo obiettivo è il profitto a lungo termine. Non hai bias sulla lega, guardi solo i dati delle squadre in campo. Odi i pronostici banali.",
+          systemInstruction: "Sei un analista calcistico tattico. Basi tutto sui dati forniti nel prompt, specialmente per i marcatori. Non inventi statistiche.",
         }
       });
 
