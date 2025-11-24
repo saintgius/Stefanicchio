@@ -24,22 +24,22 @@ export const GeminiService = {
     const schema: Schema = {
       type: Type.OBJECT,
       properties: {
-        prediction: { type: Type.STRING, description: "Previsione sintetica (es. Vittoria netta Inter)." },
+        prediction: { type: Type.STRING, description: "Previsione sintetica (es. Vittoria solida Inter)." },
         risk_level: { type: Type.STRING, enum: [RiskLevel.LOW, RiskLevel.MED, RiskLevel.HIGH], description: "Livello di rischio calcolato su 10 fattori." },
         recommended_bet: { type: Type.STRING, description: "La Giocata Principale (Sicura ma con valore)." },
         reasoning: { type: Type.STRING, description: "Analisi tecnica basata sui 10 fattori." },
         confidence_score: { type: Type.INTEGER, description: "0-100" },
         
-        exact_score: { type: Type.STRING, description: "Risultato esatto basato su potenziale offensivo/difensivo." },
+        exact_score: { type: Type.STRING, description: "Risultato esatto CALCOLATO (non casuale)." },
         bet_1x2: { type: Type.STRING, description: "1, X, o 2." },
         risky_bet: { type: Type.STRING, description: "Giocata alta quota (es. Combo o Marcatore)." },
         risky_reasoning: { type: Type.STRING, description: "Perché rischiare." },
 
         // STEFANICCHIO'S ARSENAL
-        prediction_multigol: { type: Type.STRING, description: "Range gol probabile (es. 2-4, 3-6)." },
+        prediction_multigol: { type: Type.STRING, description: "Range gol probabile (es. 1-3, 2-4)." },
         prediction_over_under: { type: Type.STRING, description: "Linea Over/Under migliore." },
         prediction_goalscorer: { type: Type.STRING, description: "Marcatore più probabile." },
-        prediction_combo: { type: Type.STRING, description: "Combo Bet logica (es. 1 + NoGoal)." },
+        prediction_combo: { type: Type.STRING, description: "Combo Bet logica (es. 1X + Under 3.5)." },
         
         tactical_insight: { type: Type.STRING, description: "Analisi profonda: possesso, punti deboli, chiavi tattiche." },
         key_duels: { type: Type.STRING, description: "Duelli chiave in campo." },
@@ -58,51 +58,58 @@ export const GeminiService = {
       required: ["prediction", "risk_level", "recommended_bet", "reasoning", "confidence_score", "exact_score", "bet_1x2", "risky_bet", "risky_reasoning", "prediction_multigol", "prediction_over_under", "prediction_goalscorer", "prediction_combo", "tactical_insight", "key_duels", "manager_duel", "stadium_atmosphere", "best_value_market", "market_reasoning", "max_drawdown"]
     };
 
-    // CALCOLO MATEMATICO PRE-PROMPT
+    // CALCOLO MATEMATICO PRE-PROMPT (Base Statistica)
     const lowestOdd = Math.min(odds.home, odds.away);
-    const isImbalanced = lowestOdd < 1.45; 
-    const isVeryImbalanced = lowestOdd < 1.25; 
-    const isTight = lowestOdd > 2.10; 
+    const favoriteOdd = odds.home < odds.away ? odds.home : odds.away;
+    const isSuperFavorite = favoriteOdd < 1.35; // Probabilità > 74%
+    const isBalanced = Math.abs(odds.home - odds.away) < 0.50; // Match equilibrato
 
-    let scenarioInstruction = "";
-    if (isVeryImbalanced) {
-        scenarioInstruction = "DOMINIO TOTALE. Squadra nettamente superiore. Risultati attesi: 3-0, 4-0, 4-1. NO 1-0 o 2-1.";
-    } else if (isImbalanced) {
-        scenarioInstruction = "CHIARA FAVORITA. Vittoria probabile con margine. Risultati: 2-0, 3-1. Evita sorprese se non motivate da assenze.";
-    } else if (isTight) {
-        scenarioInstruction = "EQUILIBRIO/SCACCHI. Match da X, 1-1, 0-0 o vittoria di misura 1-0. Partita decisa da episodi.";
-    } else {
-        scenarioInstruction = "PARTITA APERTA. Entrambe possono segnare. Focus su Over/Goal.";
-    }
-
-    let prompt = `Analizza il match: ${homeTeam} vs ${awayTeam} (${competition}).
+    let prompt = `Sei il miglior analista calcistico al mondo. Stefanicchio si fida di te.
+    Analizza il match: ${homeTeam} vs ${awayTeam} (${competition}).
     
     QUOTE: 1(${odds.home}) | X(${odds.draw}) | 2(${odds.away}).
-    SCENARIO BASE IMPOSTO: ${scenarioInstruction}
     
-    === LA MATRICE DEI 10 FATTORI (DEVI VALUTARLI TUTTI) ===
-    1. DISPARITÀ TECNICA: Confronta le rose fornite. Chi ha più qualità pura?
-    2. STATO DI FORMA: Analizza le ultime 5 partite nel contesto. Chi è in crisi? Chi vola?
-    3. FATTORE CAMPO: Quanto pesa lo stadio oggi? (Es. Anfield/San Siro in Champions = Fortino).
-    4. INFERMERIA: Controlla le news nel contesto. Manca il bomber? Manca il portiere?
-    5. MOTIVAZIONI: Chi ha più bisogno di punti? (Salvezza vs Titolo vs 'Infrasettimanale inutile').
-    6. TATTICA: Stili di gioco. Contropiede vs Possesso? Difesa alta vs Lancio lungo?
-    7. STORICO (H2H): C'è una bestia nera?
-    8. CALENDARIO/FATICA: Hanno giocato 3 giorni fa? C'è il turnover?
-    9. METEO: ${weatherContext || "N/D"}. Se piove/vento -> più errori, Under o Over casuali.
-    10. DATI GOL: Guarda gol fatti/subiti nel contesto. Difese colabrodo = Goleada.
+    === ISTRUZIONI CRUCIALI PER IL RISULTATO ESATTO (MATCH DNA PROFILING) ===
+    Non guardare solo il nome della lega. Guarda le SQUADRE nel CONTESTO fornito.
+    
+    1. ANALISI STILE SQUADRE (Dal contesto rose e storico):
+       - Squadre "Zemaniane" (es. Atalanta, Barcellona, City, Milan di Fonseca): Tendono all'Over e Goleada.
+       - Squadre "Ermetiche" (es. Juventus, Atletico, Inter in trasferta ostica): Tendono all'Under e vittoria di misura.
+       
+    2. ANALISI FORMA (Dal contesto "Ultime 5 partite"):
+       - La favorita segna tanto ultimamente? Se SÌ -> Prevedi goleada (3-0, 3-1, 4-0).
+       - La favorita vince ma segna poco? -> Prevedi "Corto Muso" (1-0, 2-0).
+       - La sfavorita subisce tanto? -> Se SÌ, autorizza l'Over.
+    
+    3. COMPETIZIONE COME FATTORE PSICOLOGICO:
+       - Serie A: Tatticismo esasperato se le quote sono equilibrate (X, 1-1, 0-0).
+       - Champions: Se c'è disparità tecnica, il divario si amplia (Goleada probabile).
+       
+    4. REGOLA MATEMATICA QUOTE:
+       - Se la quota favorita è < 1.30 E la squadra segna molto -> Risultato largo obbligatorio.
+       - Se la quota favorita è > 2.00 (Match Pari) -> Risultato stretto obbligatorio (1-1, 2-1, 1-0).
 
-    === CONTESTO REALE ===
+    === LA MATRICE DEI 10 FATTORI (DEVI VALUTARLI TUTTI) ===
+    1. DISPARITÀ TECNICA: Valore rosa (vedi contesto Rose).
+    2. STATO DI FORMA: Leggi i risultati nel contesto. Chi è in crisi nera?
+    3. FATTORE CAMPO: ${homeTeam} in casa è una fortezza?
+    4. INFERMERIA: Leggi le news nel contesto. Assenze pesanti in difesa = Più Gol.
+    5. MOTIVAZIONI: Salvezza? Scudetto? Passaggio turno?
+    6. TATTICA: Scontro stili (Possesso vs Contropiede).
+    7. STORICO (H2H): Vedi contesto. Si segnano sempre o mai?
+    8. CALENDARIO: Turnover in vista?
+    9. METEO: ${weatherContext || "N/D"}. (Pioggia = Più errori = Più gol casuali o match bloccato?)
+    10. DATI GOL: Media gol fatti/subiti dalle classifiche nel contesto.
+
+    === CONTESTO REALE (CLASSIFICA, ROSE, NEWS, PRECEDENTI) ===
     ${richContext}
     
     ${newsContext ? `ULTIME NEWS:\n${newsContext}` : ''}
     
-    COMPITI:
-    - Usa la Matrice dei 10 Fattori per dedurre il risultato.
-    - Se c'è disparità tecnica E forma positiva -> GOLEADA.
-    - Se c'è equilibrio ma difese deboli -> MULTIGOL ALTO.
-    - NON ESSERE BANALE. Se i dati dicono 4-0, scrivi 4-0, non 1-0.
-    - Stefanicchio vuole precisione sui Marcatori: scegli chi tira i rigori o chi è "on fire" dai dati.
+    COMPITI FINALI:
+    - Sii specifico. "Vittoria Inter" non basta. "Inter vince dominando sulle fasce" è meglio.
+    - Se prevedi un risultato alto (es. 4-1), DEVE esserci una giustificazione nei dati (es. difesa avversaria disastrosa).
+    - Se prevedi un risultato basso (es. 0-0), DEVE esserci una giustificazione tattica (es. due difese top).
     `;
 
     if (isFavoriteInvolved) {
@@ -116,7 +123,7 @@ export const GeminiService = {
         config: {
           responseMimeType: "application/json",
           responseSchema: schema,
-          systemInstruction: "Sei un analista calcistico d'élite. Non indovini, CALCOLI. Usi una matrice a 10 fattori per determinare l'esito. Sei allergico ai pronostici banali se i dati suggeriscono altro. Se una squadra è nettamente più forte, prevedi un dominio.",
+          systemInstruction: "Sei un analista calcistico tattico. Il tuo obiettivo è il profitto a lungo termine. Non hai bias sulla lega, guardi solo i dati delle squadre in campo. Odi i pronostici banali.",
         }
       });
 
@@ -179,11 +186,12 @@ export const GeminiService = {
     const prompt = `
       Simula la cronaca della partita ${homeTeam} vs ${awayTeam}.
       
-      DATI:
+      DATI SQUADRE E STATISTICHE:
       ${context}
       
       Genera 6-8 eventi chiave in ordine cronologico.
-      Se una squadra è molto più forte nel contesto, falla dominare (es. gol multipli).
+      Se nel contesto una squadra è molto più forte (classifica/forma), la simulazione DEVE riflettere questo dominio.
+      Se sono vicine in classifica, crea un match combattuto.
     `;
 
     try {

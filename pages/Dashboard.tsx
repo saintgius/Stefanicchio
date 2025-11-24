@@ -1,5 +1,4 @@
 
-
 import React, { useEffect, useState } from 'react';
 import { MatchCard } from '../components/MatchCard';
 import { OddsService } from '../services/odds';
@@ -7,7 +6,7 @@ import { FootballDataService } from '../services/footballdata';
 import { StorageService } from '../services/storage';
 import { NewsService, NewsArticle } from '../services/news';
 import { ProcessedMatch } from '../types';
-import { RefreshCw, AlertTriangle, CalendarDays, Settings as SettingsIcon, DownloadCloud, BarChart3, Megaphone, Trophy, Shield, Crown } from 'lucide-react';
+import { RefreshCw, AlertTriangle, CalendarDays, Settings as SettingsIcon, DownloadCloud, BarChart3, Megaphone, Trophy, Shield, Crown, Trash2 } from 'lucide-react';
 import { Button } from '../components/Button';
 import { LeagueStatsModal } from '../components/LeagueStatsModal';
 import { TheLock } from '../components/TheLock';
@@ -31,6 +30,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
   const [showLeagueStats, setShowLeagueStats] = useState(false);
   const [dropAlerts, setDropAlerts] = useState<{[key:string]: number}>({});
   
+  // Clear All Confirmation State
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [analysisVersion, setAnalysisVersion] = useState(0); // Used to force re-render of MatchCards
+
   // LEAGUE STATE
   const [activeLeague, setActiveLeague] = useState<LeagueCode>('SA');
   
@@ -179,6 +182,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
     }
   }, [oddsKey, activeLeague]);
 
+  const handleClearAllAnalyses = () => {
+      StorageService.clearAllAnalyses();
+      setAnalysisVersion(prev => prev + 1); // Increment version to force re-render of MatchCards
+      setShowClearConfirm(false);
+  };
+
   if (!oddsKey) {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] text-center space-y-6 animate-fade-in px-6">
@@ -197,8 +206,29 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
   }
 
   return (
-    <div className="space-y-6 pb-24">
+    <div className="space-y-6 pb-24 relative">
       
+      {/* CLEAR ALL CONFIRMATION MODAL */}
+      {showClearConfirm && (
+        <div className="fixed inset-0 z-[200] bg-black/90 flex flex-col items-center justify-center animate-fade-in p-6">
+            <div className="bg-neutral-900 border border-red-900 p-6 rounded-xl text-center max-w-sm w-full shadow-2xl">
+                <Trash2 size={48} className="text-red-600 mx-auto mb-4 animate-bounce" />
+                <h3 className="text-xl font-bold text-white mb-2">Cancellare Tutto?</h3>
+                <p className="text-neutral-400 text-sm mb-6">
+                    Eliminerai TUTTE le analisi IA salvate. Dovrai rigenerarle (usando crediti API).
+                </p>
+                <div className="flex gap-3">
+                    <Button onClick={() => setShowClearConfirm(false)} variant="secondary" className="flex-1">
+                        ANNULLA
+                    </Button>
+                    <Button onClick={handleClearAllAnalyses} variant="danger" className="flex-1">
+                        CANCELLA TUTTO
+                    </Button>
+                </div>
+            </div>
+        </div>
+      )}
+
       {/* Stefanicchio Welcome */}
       <div className="flex items-center justify-between mb-2">
          <div className="flex items-center gap-2">
@@ -252,12 +282,22 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
             <span className={`w-2 h-8 rounded-sm block shadow-[0_0_10px] ${isChampions ? 'bg-blue-600 shadow-blue-600/50' : 'bg-redzone-600 shadow-red-600/50'}`}></span>
             {activeLeague === 'CL' ? 'CHAMPIONS LEAGUE' : 'SERIE A'}
           </h2>
-           <button 
-            onClick={loadMatches} 
-            className="bg-neutral-800 p-2 rounded-full hover:bg-neutral-700 transition-colors text-neutral-400 hover:text-white border border-neutral-700"
-          >
-            <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
-          </button>
+          
+          <div className="flex gap-2">
+             <button 
+                onClick={() => setShowClearConfirm(true)}
+                className="bg-neutral-800 p-2 rounded-full hover:bg-red-900 transition-colors text-neutral-400 hover:text-white border border-neutral-700"
+                title="Cancella tutte le analisi"
+             >
+                <Trash2 size={20} />
+             </button>
+             <button 
+                onClick={loadMatches} 
+                className="bg-neutral-800 p-2 rounded-full hover:bg-neutral-700 transition-colors text-neutral-400 hover:text-white border border-neutral-700"
+             >
+                <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
+             </button>
+          </div>
         </div>
         
         <div className="flex justify-between items-center">
@@ -297,12 +337,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
           {matches.map(match => (
             <MatchCard 
-                key={match.id} 
+                key={`${match.id}-${analysisVersion}`} // Key changes force remount when analysis cleared
                 match={match} 
                 geminiKey={geminiKey} 
                 league={activeLeague} // Pass league info for styling
                 onDeleteAnalysis={() => {
                     StorageService.deleteAnalysis(match.id);
+                    // Force a single card refresh by key update? 
+                    // Or simpler: let the parent re-render handle it if needed, but Delete in card updates local state.
+                    // If we need global refresh on single delete, we need state lift. 
+                    // But MatchCard handles its own delete UI well.
                 }}
                 onAddToSlip={onAddToSlip}
                 dropPercentage={dropAlerts[match.id]}

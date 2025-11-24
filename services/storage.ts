@@ -483,6 +483,14 @@ export const StorageService = {
     localStorage.removeItem(`analysis_${matchId}`);
   },
 
+  clearAllAnalyses: () => {
+    Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('analysis_')) {
+            localStorage.removeItem(key);
+        }
+    });
+  },
+
   // --- BETS MANAGEMENT ---
   saveBet: (bet: Omit<BetRecord, 'id' | 'profit' | 'result'>) => {
     const existingData = localStorage.getItem(KEYS.BETS);
