@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { NewsService, NewsArticle } from '../services/news';
 import { StorageService } from '../services/storage';
@@ -98,7 +99,7 @@ export const News: React.FC = () => {
 
       {!loading && articles.length === 0 && !error && (
          <div className="text-center text-neutral-500 py-10">
-            Nessuna notizia trovata. Controlla la connessione o la chiave API.
+            Il giornalaio è chiuso. Nessuna notizia trovata.
          </div>
       )}
     </div>

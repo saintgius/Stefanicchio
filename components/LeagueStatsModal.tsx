@@ -1,4 +1,6 @@
 
+
+
 import React, { useState, useEffect } from 'react';
 import { StorageService } from '../services/storage';
 import { LeagueStanding, TopScorer } from '../types';
@@ -6,9 +8,10 @@ import { X, Trophy, Target } from 'lucide-react';
 
 interface LeagueStatsModalProps {
   onClose: () => void;
+  league: 'SA' | 'CL'; // NEW PROP
 }
 
-export const LeagueStatsModal: React.FC<LeagueStatsModalProps> = ({ onClose }) => {
+export const LeagueStatsModal: React.FC<LeagueStatsModalProps> = ({ onClose, league }) => {
   const [activeTab, setActiveTab] = useState<'standings' | 'scorers'>('standings');
   const [standings, setStandings] = useState<LeagueStanding[]>([]);
   const [scorers, setScorers] = useState<TopScorer[]>([]);
@@ -16,10 +19,15 @@ export const LeagueStatsModal: React.FC<LeagueStatsModalProps> = ({ onClose }) =
 
   useEffect(() => {
     const data = StorageService.getFootballData();
-    setStandings(data.standings);
-    setScorers(data.scorers || []);
+    // Filter data based on active league
+    // If data.league is undefined (old data), fallback to 'SA' for consistency or just don't filter strict
+    const filteredStandings = data.standings.filter(s => s.league === league || (!s.league && league === 'SA'));
+    const filteredScorers = data.scorers.filter(s => s.league === league || (!s.league && league === 'SA'));
+
+    setStandings(filteredStandings);
+    setScorers(filteredScorers);
     setLoading(false);
-  }, []);
+  }, [league]);
 
   const getFormBadge = (result: string) => {
     if (result === 'W') return { label: 'V', color: 'bg-green-600 text-white' };
@@ -27,6 +35,10 @@ export const LeagueStatsModal: React.FC<LeagueStatsModalProps> = ({ onClose }) =
     if (result === 'L') return { label: 'S', color: 'bg-red-600 text-white' };
     return { label: '-', color: 'bg-neutral-800 text-neutral-500' };
   };
+  
+  const isChampions = league === 'CL';
+  const themeColor = isChampions ? 'text-blue-500' : 'text-yellow-500';
+  const borderTheme = isChampions ? 'border-blue-500' : 'border-yellow-500';
 
   return (
     <div className="fixed inset-0 z-[100] bg-darkbg/95 backdrop-blur flex flex-col animate-fade-in">
@@ -34,7 +46,7 @@ export const LeagueStatsModal: React.FC<LeagueStatsModalProps> = ({ onClose }) =
       {/* Header */}
       <div className="p-4 border-b border-neutral-800 flex justify-between items-center bg-neutral-900">
         <h2 className="font-bold text-lg text-white flex items-center gap-2">
-          <Trophy size={18} className="text-yellow-500" /> STATISTICHE SERIE A
+          <Trophy size={18} className={themeColor} /> STATISTICHE {isChampions ? 'CHAMPIONS LEAGUE' : 'SERIE A'}
         </h2>
         <button onClick={onClose} className="bg-neutral-800 p-2 rounded-full hover:text-white">
           <X size={20} />
@@ -45,13 +57,13 @@ export const LeagueStatsModal: React.FC<LeagueStatsModalProps> = ({ onClose }) =
       <div className="flex border-b border-neutral-800 bg-neutral-900">
         <button 
           onClick={() => setActiveTab('standings')}
-          className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-colors ${activeTab === 'standings' ? 'bg-neutral-800 text-white border-b-2 border-yellow-500' : 'text-neutral-500'}`}
+          className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-colors ${activeTab === 'standings' ? `bg-neutral-800 text-white border-b-2 ${borderTheme}` : 'text-neutral-500'}`}
         >
           Classifica
         </button>
         <button 
           onClick={() => setActiveTab('scorers')}
-          className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-colors ${activeTab === 'scorers' ? 'bg-neutral-800 text-white border-b-2 border-yellow-500' : 'text-neutral-500'}`}
+          className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-colors ${activeTab === 'scorers' ? `bg-neutral-800 text-white border-b-2 ${borderTheme}` : 'text-neutral-500'}`}
         >
           Marcatori
         </button>
@@ -59,10 +71,12 @@ export const LeagueStatsModal: React.FC<LeagueStatsModalProps> = ({ onClose }) =
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-0">
-        {standings.length === 0 ? (
+        {(activeTab === 'standings' && standings.length === 0) || (activeTab === 'scorers' && scorers.length === 0) ? (
             <div className="flex flex-col items-center justify-center h-64 text-neutral-500 text-sm p-8 text-center">
-                <p className="mb-4">Nessun dato disponibile.</p>
-                <p className="text-xs">Vai in Impostazioni e clicca "Sincronizza Ora" per scaricare gli ultimi dati.</p>
+                <p className="mb-4">Nessun dato disponibile per {isChampions ? 'la Champions League' : 'la Serie A'}.</p>
+                <div className="p-3 bg-red-900/20 border border-red-900 rounded-lg text-red-400 text-xs">
+                    ⚠️ Vai in Impostazioni e clicca <br/> <strong>"SINCRONIZZA (SA + CL)"</strong> <br/> per aggiornare il database.
+                </div>
             </div>
         ) : (
             <>
@@ -82,7 +96,7 @@ export const LeagueStatsModal: React.FC<LeagueStatsModalProps> = ({ onClose }) =
                         <td className="px-3 py-3 text-center font-mono text-neutral-500">
                             {team.position}
                             {team.position <= 4 && <span className="block w-1 h-1 bg-blue-500 rounded-full mx-auto mt-1"></span>}
-                            {team.position > 17 && <span className="block w-1 h-1 bg-red-500 rounded-full mx-auto mt-1"></span>}
+                            {team.position > 17 && !isChampions && <span className="block w-1 h-1 bg-red-500 rounded-full mx-auto mt-1"></span>}
                         </td>
                         <td className="px-3 py-3 font-bold text-white">
                             <div className="flex items-center gap-2">
@@ -124,14 +138,9 @@ export const LeagueStatsModal: React.FC<LeagueStatsModalProps> = ({ onClose }) =
                             <div className="font-bold text-white">{scorer.player.name}</div>
                             <div className="text-xs text-neutral-500">{scorer.team.name}</div>
                         </td>
-                        <td className="px-4 py-3 text-right font-bold text-yellow-500 text-lg">{scorer.goals}</td>
+                        <td className={`px-4 py-3 text-right font-bold text-lg ${themeColor}`}>{scorer.goals}</td>
                         </tr>
                     ))}
-                    {scorers.length === 0 && (
-                        <tr>
-                            <td colSpan={3} className="text-center py-8 text-neutral-500">Dati marcatori non presenti. Sincronizza.</td>
-                        </tr>
-                    )}
                     </tbody>
                 </table>
                 )}

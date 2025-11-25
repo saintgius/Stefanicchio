@@ -1,13 +1,15 @@
 
-
-
-
 import React, { useState, useEffect } from 'react';
 import { AnalysisResult, ProcessedMatch, RiskLevel, FootballDataMatch, WeatherData } from '../types';
 import { StorageService } from '../services/storage';
-import { X, TrendingUp, AlertOctagon, ShieldAlert, BrainCircuit, History, Zap, Swords, Percent, DollarSign, BarChart3, FileText, CloudRain, Wind, Sun, Cloud, CloudSnow, Thermometer, Crown, Ambulance, Megaphone, UserCog, Target, Crosshair, Layers, Timer } from 'lucide-react';
+import { X, TrendingUp, AlertOctagon, ShieldAlert, BrainCircuit, History, Zap, Swords, Percent, DollarSign, BarChart3, FileText, CloudRain, Wind, Sun, Cloud, CloudSnow, Thermometer, Crown, Ambulance, Megaphone, UserCog, Target, Crosshair, Layers, Timer, AlertTriangle, Gavel, Scale } from 'lucide-react';
 import { Button } from './Button';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip } from 'recharts';
+
+// Mini Icon component helper - Outside to avoid hoisting issues
+const ArrowUpRightIcon = ({size, className}: {size: number, className?: string}) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg>
+);
 
 interface MatchAnalysisOverlayProps {
   match: ProcessedMatch;
@@ -16,13 +18,16 @@ interface MatchAnalysisOverlayProps {
   onDelete: () => void;
   onAddToSlip: (match: string, selection: string, odds: number) => void;
   weather: WeatherData | null;
-  league?: 'SA' | 'CL'; // NEW PROP
+  league?: 'SA' | 'CL';
 }
 
 export const MatchAnalysisOverlay: React.FC<MatchAnalysisOverlayProps> = ({ match, analysis, onClose, onDelete, onAddToSlip, weather, league = 'SA' }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'stats' | 'advanced'>('overview');
-  const [homeForm, setHomeForm] = useState<string[]>([]);
-  const [awayForm, setAwayForm] = useState<string[]>([]);
+  
+  // Advanced Form State
+  const [homeAdvancedForm, setHomeAdvancedForm] = useState<{result: 'W'|'D'|'L', score: string, color: string, tooltip: string}[]>([]);
+  const [awayAdvancedForm, setAwayAdvancedForm] = useState<{result: 'W'|'D'|'L', score: string, color: string, tooltip: string}[]>([]);
+  
   const [homeRank, setHomeRank] = useState<number | null>(null);
   const [awayRank, setAwayRank] = useState<number | null>(null);
   const [h2hMatches, setH2hMatches] = useState<FootballDataMatch[]>([]);
@@ -33,8 +38,10 @@ export const MatchAnalysisOverlay: React.FC<MatchAnalysisOverlayProps> = ({ matc
   const themeAccent = isChampions ? 'bg-blue-600' : 'bg-redzone-600';
 
   useEffect(() => {
-    setHomeForm(StorageService.getFormArray(match.homeTeam));
-    setAwayForm(StorageService.getFormArray(match.awayTeam));
+    // New Advanced Form Logic
+    setHomeAdvancedForm(StorageService.getAdvancedForm(match.homeTeam));
+    setAwayAdvancedForm(StorageService.getAdvancedForm(match.awayTeam));
+    
     setHomeRank(StorageService.getTeamRank(match.homeTeam));
     setAwayRank(StorageService.getTeamRank(match.awayTeam));
     setH2hMatches(StorageService.getH2HMatches(match.homeTeam, match.awayTeam));
@@ -55,24 +62,17 @@ export const MatchAnalysisOverlay: React.FC<MatchAnalysisOverlayProps> = ({ matc
     }
   };
 
-  const getFormBadge = (result: string) => {
-    if (result === 'W') return { label: 'V', color: 'bg-green-600 text-white' };
-    if (result === 'D') return { label: 'P', color: 'bg-neutral-600 text-gray-300' };
-    if (result === 'L') return { label: 'S', color: 'bg-red-600 text-white' };
-    return { label: '-', color: 'bg-neutral-800 text-neutral-500' };
-  };
-
-  const renderFormBadges = (form: string[]) => (
-    <div className="flex gap-1">
-      {form.map((res, i) => {
-        const badge = getFormBadge(res);
-        return (
-          <span key={i} className={`w-6 h-6 flex items-center justify-center text-[10px] font-bold rounded ${badge.color}`}>
-            {badge.label}
-          </span>
-        );
-      })}
-    </div>
+  const renderAdvancedForm = (form: {result: 'W'|'D'|'L', score: string, color: string, tooltip: string}[]) => (
+      <div className="flex gap-1.5">
+          {form.map((f, i) => (
+              <div 
+                  key={i} 
+                  className={`w-4 h-4 rounded-full ${f.color} shadow-sm border border-black/20 cursor-help`}
+                  title={f.tooltip}
+              ></div>
+          ))}
+          {form.length === 0 && <span className="text-xs text-neutral-600">N/D</span>}
+      </div>
   );
 
   const getWeatherIcon = () => {
@@ -84,15 +84,6 @@ export const MatchAnalysisOverlay: React.FC<MatchAnalysisOverlayProps> = ({ matc
           case 'CLOUDY': return <Cloud size={24} className="text-gray-400" />;
           default: return <Sun size={24} className="text-yellow-500" />;
       }
-  };
-
-  const getWeatherDescription = () => {
-      if (!weather) return "Meteo N/D";
-      if (weather.condition === 'RAIN') return "CAMPO PESANTE";
-      if (weather.condition === 'WIND') return "VENTO FORTE";
-      if (weather.condition === 'SNOW') return "NEVE - CAMPO LENTO";
-      if (weather.temp > 30) return "CALDO TORRIDO";
-      return "CONDIZIONI OTTIMALI";
   };
 
   // Chart Data for Confidence Gauge
@@ -165,25 +156,13 @@ export const MatchAnalysisOverlay: React.FC<MatchAnalysisOverlayProps> = ({ matc
         {activeTab === 'overview' && (
           <div className="space-y-6 animate-fade-in">
             
-            {/* WEATHER WIDGET */}
-            {weather && (
-                <div className={`rounded-xl p-4 border flex items-center justify-between ${
-                    weather.condition === 'WIND' || weather.condition === 'RAIN' || weather.condition === 'SNOW' 
-                    ? 'bg-red-900/10 border-red-900/30' 
-                    : 'bg-blue-900/10 border-blue-900/30'
-                }`}>
-                    <div className="flex items-center gap-3">
-                        <div className="bg-cardbg p-2 rounded-full border border-neutral-800">
-                            {getWeatherIcon()}
-                        </div>
-                        <div>
-                            <h3 className="text-xs font-bold text-white uppercase tracking-wider mb-0.5">{getWeatherDescription()}</h3>
-                            <div className="text-xs text-neutral-400 flex gap-3 font-mono">
-                                <span className="flex items-center gap-1"><Thermometer size={10}/> {weather.temp}°C</span>
-                                <span className="flex items-center gap-1"><Wind size={10}/> {weather.wind_speed}km/h</span>
-                                {weather.precip_prob > 0 && <span className="flex items-center gap-1"><CloudRain size={10}/> {weather.precip_prob}%</span>}
-                            </div>
-                        </div>
+            {/* TURNOVER ALERT */}
+            {analysis.turnover_alert && (
+                <div className="bg-yellow-900/20 border border-yellow-600 rounded-xl p-4 flex gap-3 animate-pulse">
+                    <AlertTriangle size={24} className="text-yellow-500 shrink-0" />
+                    <div>
+                        <h3 className="text-yellow-500 font-bold uppercase text-xs mb-1">Massiccio Turnover Rilevato</h3>
+                        <p className="text-neutral-300 text-sm leading-snug">{analysis.turnover_alert}</p>
                     </div>
                 </div>
             )}
@@ -210,7 +189,7 @@ export const MatchAnalysisOverlay: React.FC<MatchAnalysisOverlayProps> = ({ matc
                   
                   <Button 
                     className="w-full mb-4 text-xs py-2 bg-green-600 hover:bg-green-500 border-none shadow-none text-white"
-                    onClick={() => onAddToSlip(`${match.homeTeam} - ${match.awayTeam}`, analysis.recommended_bet, 1.85)} // Odds placeholder or calculate implied
+                    onClick={() => onAddToSlip(`${match.homeTeam} - ${match.awayTeam}`, analysis.recommended_bet, 1.85)} 
                   >
                     <DollarSign size={14} /> GIOCA QUESTA (Safe)
                   </Button>
@@ -220,6 +199,19 @@ export const MatchAnalysisOverlay: React.FC<MatchAnalysisOverlayProps> = ({ matc
                   </p>
               </div>
             </div>
+            
+            {/* REFEREE DOSSIER */}
+            {analysis.referee_analysis && (
+                <div className="bg-neutral-800/50 border border-neutral-700 rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-2 pb-2 border-b border-neutral-700">
+                        <div className="bg-black p-1.5 rounded text-neutral-400">
+                             <Gavel size={16} />
+                        </div>
+                        <h3 className="text-xs font-bold text-neutral-300 uppercase">Dossier Arbitro</h3>
+                    </div>
+                    <p className="text-sm text-white italic">{analysis.referee_analysis}</p>
+                </div>
+            )}
             
             {/* INJURIES & KEY PLAYERS */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -266,18 +258,6 @@ export const MatchAnalysisOverlay: React.FC<MatchAnalysisOverlayProps> = ({ matc
                 </div>
             )}
             
-            {analysis.stadium_atmosphere && (
-                <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                        <Megaphone size={16} className={isChampions ? "text-blue-400" : "text-orange-400"} />
-                        <h3 className={`text-xs font-bold uppercase ${isChampions ? "text-blue-400" : "text-orange-400"}`}>
-                            Fattore Stadio
-                        </h3>
-                    </div>
-                    <p className="text-xs text-neutral-300">{analysis.stadium_atmosphere}</p>
-                </div>
-            )}
-
             {/* DEEP TACTICAL INSIGHT */}
             <div className="bg-cardbg border border-neutral-800 rounded-xl p-5">
                <div className="flex items-center gap-2 mb-4 pb-2 border-b border-neutral-800">
@@ -287,12 +267,6 @@ export const MatchAnalysisOverlay: React.FC<MatchAnalysisOverlayProps> = ({ matc
                <div className="text-sm text-neutral-300 leading-relaxed space-y-2 whitespace-pre-line">
                  {analysis.tactical_insight || "Analisi tattica non disponibile."}
                </div>
-               {analysis.key_duels && (
-                  <div className="mt-4 pt-4 border-t border-neutral-800">
-                     <h4 className="text-xs font-bold text-neutral-500 uppercase mb-1">Duelli Chiave</h4>
-                     <p className="text-sm text-white font-medium">{analysis.key_duels}</p>
-                  </div>
-               )}
             </div>
 
             {/* CYNICAL MODE ALERT */}
@@ -316,7 +290,7 @@ export const MatchAnalysisOverlay: React.FC<MatchAnalysisOverlayProps> = ({ matc
             <div className="bg-cardbg border border-neutral-800 rounded-xl p-5">
               <div className="flex items-center gap-2 mb-4">
                 <History size={18} className="text-blue-500" />
-                <h3 className="font-bold text-white text-sm uppercase">Forma Recente</h3>
+                <h3 className="font-bold text-white text-sm uppercase">Forma Recente (Visual)</h3>
               </div>
 
               <div className="space-y-4">
@@ -332,7 +306,7 @@ export const MatchAnalysisOverlay: React.FC<MatchAnalysisOverlayProps> = ({ matc
                         <span className="font-bold text-sm">{match.homeTeam}</span>
                      </div>
                    </div>
-                   {renderFormBadges(homeForm)}
+                   {renderAdvancedForm(homeAdvancedForm)}
                 </div>
                 
                 <div className="w-full h-px bg-neutral-800"></div>
@@ -349,14 +323,20 @@ export const MatchAnalysisOverlay: React.FC<MatchAnalysisOverlayProps> = ({ matc
                         <span className="font-bold text-sm">{match.awayTeam}</span>
                      </div>
                    </div>
-                   {renderFormBadges(awayForm)}
+                   {renderAdvancedForm(awayAdvancedForm)}
+                </div>
+                
+                <div className="mt-4 pt-4 border-t border-neutral-800 text-[10px] text-neutral-500 flex gap-4 justify-center">
+                    <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-green-600 shadow-[0_0_5px_#22c55e]"></div> Netta</div>
+                    <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-yellow-500"></div> Risicata</div>
+                    <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-neutral-600"></div> X</div>
+                    <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-red-600"></div> Persa</div>
                 </div>
               </div>
-            </div>
 
             {/* H2H Matches */}
             {h2hMatches.length > 0 ? (
-              <div className="bg-cardbg border border-neutral-800 rounded-xl p-5">
+              <div className="bg-cardbg border border-neutral-800 rounded-xl p-5 mt-4">
                 <div className="flex items-center gap-2 mb-4">
                    <Swords size={18} className="text-yellow-500" />
                    <h3 className="font-bold text-white text-sm uppercase">Precedenti (Stagione)</h3>
@@ -373,7 +353,7 @@ export const MatchAnalysisOverlay: React.FC<MatchAnalysisOverlayProps> = ({ matc
                 </div>
               </div>
             ) : (
-               <div className="p-4 text-center text-xs text-neutral-500 border border-dashed border-neutral-800 rounded-xl">
+               <div className="p-4 text-center text-xs text-neutral-500 border border-dashed border-neutral-800 rounded-xl mt-4">
                  Nessun precedente diretto in questa stagione.
                </div>
             )}
@@ -404,6 +384,7 @@ export const MatchAnalysisOverlay: React.FC<MatchAnalysisOverlayProps> = ({ matc
                  </ResponsiveContainer>
               </div>
             </div>
+          </div>
           </div>
         )}
 
@@ -562,8 +543,3 @@ export const MatchAnalysisOverlay: React.FC<MatchAnalysisOverlayProps> = ({ matc
     </div>
   );
 };
-
-// Mini Icon component helper
-const ArrowUpRightIcon = ({size, className}: {size: number, className?: string}) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg>
-);

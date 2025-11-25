@@ -1,5 +1,6 @@
 
 
+
 import { GoogleGenAI, Type, Schema } from '@google/genai';
 import { AnalysisResult, RiskLevel, OracleEvent } from '../types';
 
@@ -47,6 +48,9 @@ export const GeminiService = {
         
         manager_duel: { type: Type.STRING, description: "Scontro tattico allenatori." },
         stadium_atmosphere: { type: Type.STRING, description: "Influenza pubblico/stadio." },
+        
+        turnover_alert: { type: Type.STRING, description: "Avviso se mancano titolari chiave (es. 'Mancano Lautaro e Barella'). Se titolari, lascia vuoto." },
+        referee_analysis: { type: Type.STRING, description: "Analisi arbitro (Nome, media cartellini, tendenza)." },
 
         best_value_market: { type: Type.STRING, description: "Mercato con valore matematico." },
         market_reasoning: { type: Type.STRING, description: "Logica matematica." },
@@ -56,7 +60,7 @@ export const GeminiService = {
         unavailable_players: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Lista infortunati." },
         key_players_analysis: { type: Type.STRING, description: "Chi è in forma?" }
       },
-      required: ["prediction", "risk_level", "recommended_bet", "reasoning", "confidence_score", "exact_score", "bet_1x2", "risky_bet", "risky_reasoning", "prediction_multigol", "prediction_over_under", "prediction_goalscorer", "prediction_combo", "tactical_insight", "key_duels", "manager_duel", "stadium_atmosphere", "best_value_market", "market_reasoning", "max_drawdown"]
+      required: ["prediction", "risk_level", "recommended_bet", "reasoning", "confidence_score", "exact_score", "bet_1x2", "risky_bet", "risky_reasoning", "prediction_multigol", "prediction_over_under", "prediction_goalscorer", "prediction_combo", "tactical_insight", "key_duels", "manager_duel", "stadium_atmosphere", "best_value_market", "market_reasoning", "max_drawdown", "referee_analysis"]
     };
 
     let prompt = `Sei il miglior analista calcistico al mondo. Stefanicchio si fida di te.
@@ -94,6 +98,9 @@ export const GeminiService = {
     8. CALENDARIO: Turnover?
     9. METEO: ${weatherContext || "N/D"}.
     10. DATI GOL: Media gol reale.
+    
+    11. DOSSIER ARBITRO: Stima un arbitro probabile o analizza lo stile arbitrale tipico per questo tipo di match (es. "Severo sui falli tattici").
+    12. TURNOVER SCANNER: Leggi le NEWS e il CONTESTO. Se ci sono parole come "panchina", "turnover", "riserve" o assenze di Top Player (citati nei marcatori), GENERA UN ALERT nel campo 'turnover_alert'.
 
     === CONTESTO REALE (CLASSIFICA, MARCATORI, ROSE, PRECEDENTI) ===
     ${richContext}

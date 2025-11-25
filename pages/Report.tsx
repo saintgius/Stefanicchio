@@ -1,4 +1,6 @@
 
+
+
 import React, { useState, useEffect, useRef } from 'react';
 import { StorageService } from '../services/storage';
 import { GeminiService } from '../services/gemini';
@@ -388,7 +390,7 @@ export const Report: React.FC<ReportProps> = ({ isBetSlipOpen, onOpenGlobalSlip 
 
           {filteredBets.length === 0 && (
               <div className="text-center py-10 text-neutral-600 text-sm italic border border-dashed border-neutral-800 rounded-xl">
-                  Nessuna scommessa trovata in questa categoria.
+                  Nessuna giocata qui. Stefanicchio sta ancora dormendo?
               </div>
           )}
         </div>

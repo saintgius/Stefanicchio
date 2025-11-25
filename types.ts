@@ -1,5 +1,4 @@
 
-
 export enum RiskLevel {
   LOW = 'BASSO',
   MED = 'MEDIO',
@@ -32,6 +31,10 @@ export interface AnalysisResult {
   // Stefanicchio's Exclusive Upgrades
   manager_duel: string;     // "Inzaghi (3-5-2) vs Conte (3-4-3)"
   stadium_atmosphere: string; // "San Siro sarà una bolgia, fattore casa decisivo"
+
+  // New Features (Turnover & Referee)
+  turnover_alert?: string; // "ATTENZIONE: Giocano le riserve (Mancano Lautaro, Barella)"
+  referee_analysis?: string; // "Orsato: Media 4.5 gialli, severo sui falli tattici."
 
   // Advanced Metrics
   best_value_market: string; 
@@ -140,6 +143,7 @@ export interface LeagueStanding {
   goalsAgainst: number;
   goalDifference: number;
   form: string; // es. "W,W,D,L,W"
+  league?: 'SA' | 'CL'; // ADDED TAG
 }
 
 export interface TopScorer {
@@ -154,6 +158,7 @@ export interface TopScorer {
   goals: number;
   assists: number | null;
   penalties: number | null;
+  league?: 'SA' | 'CL'; // ADDED TAG
 }
 
 export interface FootballDataMatch {

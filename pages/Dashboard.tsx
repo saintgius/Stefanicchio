@@ -1,4 +1,8 @@
 
+
+
+
+
 import React, { useEffect, useState } from 'react';
 import { MatchCard } from '../components/MatchCard';
 import { OddsService } from '../services/odds';
@@ -201,9 +205,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
       const allMatches = await OddsService.fetchMatches(oddsKey, config.oddsKey);
       
       StorageService.saveUpcomingMatches(allMatches);
-
-      // Removed aggressive auto-sync here to prevent 429s. 
-      // Rely on manual sync in Settings or data already cached.
 
       if (allMatches.length > 0) {
         // TRACK OPENING ODDS
@@ -426,7 +427,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
       {loading && !matches.length ? (
         <div className="flex flex-col items-center justify-center py-20 gap-4">
            <div className={`w-8 h-8 border-4 border-t-transparent rounded-full animate-spin ${isChampions ? 'border-blue-500' : 'border-redzone-600'}`}></div>
-           <div className="text-neutral-500 text-sm animate-pulse">Analisi mercato {activeLeague}...</div>
+           <div className="text-neutral-500 text-sm animate-pulse font-bold">Stefanicchio sta studiando le quote...</div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
@@ -446,14 +447,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
           
           {!loading && matches.length === 0 && !error && (
             <div className="col-span-full text-center py-16 bg-neutral-900/30 rounded-xl border border-dashed border-neutral-800">
-              <p className="text-neutral-500 font-medium">Nessuna partita {activeLeague === 'CL' ? 'di Champions' : 'di Serie A'} trovata a breve.</p>
+              <p className="text-neutral-500 font-medium">Nessuna partita. Il calendario è vuoto, e anche il frigo.</p>
             </div>
           )}
         </div>
       )}
 
       {showLeagueStats && (
-        <LeagueStatsModal onClose={() => setShowLeagueStats(false)} />
+        <LeagueStatsModal onClose={() => setShowLeagueStats(false)} league={activeLeague} />
       )}
       
       <style>{`

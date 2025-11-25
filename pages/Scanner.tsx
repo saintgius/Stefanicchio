@@ -1,7 +1,8 @@
 
 
+
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Upload, ScanLine, Gem, DollarSign, ArrowRight, Loader2, Image as ImageIcon, Scale, Bot, Calculator, AlertTriangle, CheckCircle, TrendingUp, Diamond, ChevronDown, ChevronUp } from 'lucide-react';
+import { Camera, Upload, ScanLine, Gem, DollarSign, ArrowRight, Loader2, Image as ImageIcon, Scale, Bot, Calculator, AlertTriangle, CheckCircle, TrendingUp, Diamond, ChevronDown, ChevronUp, Layers, Heart, X as XIcon, Hand } from 'lucide-react';
 import { Button } from '../components/Button';
 import { StorageService } from '../services/storage';
 import { GeminiService } from '../services/gemini';
@@ -35,6 +36,7 @@ export const Scanner: React.FC<ScannerProps> = ({ onSaveBet }) => {
         if (activeTab === 'value') scanForValue();
         if (activeTab === 'arb') scanForArbs();
     }, [activeTab]);
+
 
     // --- OCR LOGIC ---
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -118,14 +120,10 @@ export const Scanner: React.FC<ScannerProps> = ({ onSaveBet }) => {
             const { odds, providers } = match;
             
             if (odds && odds.home > 1 && odds.draw > 1 && odds.away > 1) {
-                // Calculate Sum of Implied Probabilities
                 const sumProb = (1/odds.home) + (1/odds.draw) + (1/odds.away);
                 const margin = sumProb * 100;
                 
-                // If sumProb < 1, it's a Surebet (Arbitrage)
-                // If sumProb is close to 1 (e.g. < 1.05), it's a Value Bet (Low Margin)
-                
-                if (margin < 107) { // Filter only good margins
+                if (margin < 107) { 
                     opportunities.push({
                         match: `${match.homeTeam} vs ${match.awayTeam}`,
                         home: { price: odds.home, bookie: providers.home },
@@ -138,13 +136,10 @@ export const Scanner: React.FC<ScannerProps> = ({ onSaveBet }) => {
             }
         });
         
-        // Sort: Surebets first (lowest margin), then best value bets
         setArbOpportunities(opportunities.sort((a,b) => a.margin - b.margin));
     };
 
     const getArbStake = (price: number, totalStake: number, margin: number) => {
-        // Dutching Formula: (TotalStake * (1/Price)) / SumImpliedProb
-        // Since margin = SumImpliedProb * 100, we divide margin by 100
         const sumProb = margin / 100;
         return ((totalStake * (1/price)) / sumProb).toFixed(2);
     };
@@ -352,12 +347,12 @@ export const Scanner: React.FC<ScannerProps> = ({ onSaveBet }) => {
                 <div className="space-y-4">
                     <div className="bg-neutral-900 p-4 rounded-xl border border-neutral-800">
                         <h3 className="text-green-400 font-bold flex items-center gap-2 mb-2"><Scale size={18}/> Scanner Arbitraggio & Lavagna</h3>
-                        <p className="text-xs text-neutral-400">Analizza il margine dei bookmaker. Se trovi un diamante <Diamond size={10} className="inline text-blue-400"/>, è un profitto matematico (Surebet).</p>
+                        <p className="text-xs text-neutral-400">Se vedi un diamante <Diamond size={10} className="inline text-blue-400"/>, il banco sta regalando soldi.</p>
                     </div>
 
                     {arbOpportunities.length === 0 ? (
                         <div className="text-center py-12 text-neutral-600 text-sm border border-dashed border-neutral-800 rounded-xl">
-                            Nessuna opportunità di arbitraggio o quote ad alto valore trovata.
+                            Nessun arbitraggio oggi. I bookmaker sono svegli.
                         </div>
                     ) : (
                         <div className="space-y-3">
@@ -382,7 +377,7 @@ export const Scanner: React.FC<ScannerProps> = ({ onSaveBet }) => {
                                         >
                                             <div>
                                                 <h4 className="font-bold text-white text-sm">{arb.match}</h4>
-                                                {isSurebet && <div className="text-[10px] text-blue-400 font-bold flex items-center gap-1 mt-1"><Diamond size={10} /> SUREBET DETECTED (+{arb.profitPercentage.toFixed(2)}%)</div>}
+                                                {isSurebet && <div className="text-[10px] text-blue-400 font-bold flex items-center gap-1 mt-1"><Diamond size={10} /> SUREBET (+{arb.profitPercentage.toFixed(2)}%)</div>}
                                             </div>
                                             <div className="flex flex-col items-end gap-1">
                                                 <span className={`text-[10px] px-2 py-0.5 rounded ${bgBadge}`}>
@@ -392,7 +387,6 @@ export const Scanner: React.FC<ScannerProps> = ({ onSaveBet }) => {
                                             </div>
                                         </div>
                                         
-                                        {/* Odds Preview */}
                                         {!isExpanded && (
                                             <div className="flex justify-between gap-2 text-center text-xs mt-3 opacity-70">
                                                 <span className="flex-1 bg-neutral-900 py-1 rounded">1: {arb.home.price}</span>
@@ -401,7 +395,6 @@ export const Scanner: React.FC<ScannerProps> = ({ onSaveBet }) => {
                                             </div>
                                         )}
 
-                                        {/* EXPANDED CALCULATOR */}
                                         {isExpanded && (
                                             <div className="mt-4 border-t border-neutral-800 pt-4 animate-fade-in">
                                                 <div className="flex items-center gap-2 mb-4 bg-black/50 p-2 rounded border border-neutral-800">
@@ -419,7 +412,6 @@ export const Scanner: React.FC<ScannerProps> = ({ onSaveBet }) => {
                                                 </div>
 
                                                 <div className="space-y-2">
-                                                    {/* Home Row */}
                                                     <div className="flex justify-between items-center text-sm bg-neutral-900/50 p-2 rounded">
                                                         <div className="flex flex-col">
                                                             <span className="font-bold text-white">Punta 1</span>
@@ -430,7 +422,6 @@ export const Scanner: React.FC<ScannerProps> = ({ onSaveBet }) => {
                                                             <div className="text-[9px] text-neutral-600">Ritorno: {(Number(getArbStake(arb.home.price, arbStake, arb.margin)) * arb.home.price).toFixed(2)}€</div>
                                                         </div>
                                                     </div>
-                                                     {/* Draw Row */}
                                                      <div className="flex justify-between items-center text-sm bg-neutral-900/50 p-2 rounded">
                                                         <div className="flex flex-col">
                                                             <span className="font-bold text-white">Punta X</span>
@@ -441,7 +432,6 @@ export const Scanner: React.FC<ScannerProps> = ({ onSaveBet }) => {
                                                             <div className="text-[9px] text-neutral-600">Ritorno: {(Number(getArbStake(arb.draw.price, arbStake, arb.margin)) * arb.draw.price).toFixed(2)}€</div>
                                                         </div>
                                                     </div>
-                                                     {/* Away Row */}
                                                      <div className="flex justify-between items-center text-sm bg-neutral-900/50 p-2 rounded">
                                                         <div className="flex flex-col">
                                                             <span className="font-bold text-white">Punta 2</span>
@@ -478,7 +468,7 @@ export const Scanner: React.FC<ScannerProps> = ({ onSaveBet }) => {
                     </div>
                     {valueBets.length === 0 ? (
                         <div className="text-center py-12 text-neutral-600 text-sm border border-dashed border-neutral-800 rounded-xl">
-                            <Gem size={32} className="mx-auto mb-2 opacity-50" /> Nessuna Value Bet trovata.
+                            <Gem size={32} className="mx-auto mb-2 opacity-50" /> Stefanicchio non ha trovato oro oggi.
                         </div>
                     ) : (
                         <div className="grid gap-3">

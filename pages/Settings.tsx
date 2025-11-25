@@ -1,4 +1,6 @@
 
+
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '../components/Button';
 import { StorageService } from '../services/storage';
@@ -133,6 +135,10 @@ export const Settings: React.FC = () => {
       const squadsSA = await FootballDataService.fetchTeams(keys.footballKey, 'SA');
       await wait(2000);
 
+      // TAG SA DATA
+      const standingsSA_Tagged = standingsSA.map(s => ({...s, league: 'SA' as const}));
+      const scorersSA_Tagged = scorersSA.map(s => ({...s, league: 'SA' as const}));
+
       // 2. SYNC CHAMPIONS LEAGUE
       setSyncProgress('CL: Classifica...');
       let standingsCL: any[] = [], matchesCL: any[] = [], scorersCL: any[] = [], squadsCL: any[] = [];
@@ -155,10 +161,14 @@ export const Settings: React.FC = () => {
           console.warn("Champions League sync partial fail", e);
       }
 
+      // TAG CL DATA
+      const standingsCL_Tagged = standingsCL.map(s => ({...s, league: 'CL' as const}));
+      const scorersCL_Tagged = scorersCL.map(s => ({...s, league: 'CL' as const}));
+
       // 3. MERGE DATA
-      const mergedStandings = [...standingsSA, ...standingsCL];
-      const mergedMatches = [...matchesSA, ...matchesCL];
-      const mergedScorers = [...scorersSA, ...scorersCL];
+      const mergedStandings = [...standingsSA_Tagged, ...standingsCL_Tagged];
+      const mergedMatches = [...matchesSA, ...matchesCL]; // Matches normally have competition info inside
+      const mergedScorers = [...scorersSA_Tagged, ...scorersCL_Tagged];
       const mergedSquads = [...squadsSA, ...squadsCL];
 
       StorageService.saveFootballData(mergedStandings, mergedMatches, mergedScorers, mergedSquads);

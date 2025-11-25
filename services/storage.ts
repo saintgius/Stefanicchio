@@ -1,4 +1,6 @@
 
+
+
 import { BetRecord, UserStats, LeagueStanding, FootballDataMatch, TopScorer, TeamSquad, ProcessedMatch } from '../types';
 import { NewsArticle } from './news';
 
@@ -31,12 +33,14 @@ const normalizeTeamName = (name: string): string => {
     // SERIE A
     'inter': 'inter',
     'internazionale': 'inter',
+    'inter milan': 'inter',
     'fc internazionale milano': 'inter',
     'milan': 'milan',
     'ac milan': 'milan',
     'juventus': 'juventus',
     'juve': 'juventus',
     'juventus fc': 'juventus',
+    'juventus turin': 'juventus',
     'roma': 'roma',
     'as roma': 'roma',
     'lazio': 'lazio',
@@ -291,6 +295,81 @@ export const StorageService = {
       }).join('\n');
   },
 
+  getAdvancedForm: (teamName: string, limit: number = 5): {result: 'W'|'D'|'L', score: string, color: string, tooltip: string}[] => {
+      const matches: FootballDataMatch[] = localStorage.getItem(KEYS.SEASON_MATCHES) ? JSON.parse(localStorage.getItem(KEYS.SEASON_MATCHES) || '[]') : [];
+      if (matches.length === 0) return [];
+
+      const normTeam = normalizeTeamName(teamName);
+      
+      const teamMatches = matches.filter(m => {
+          const h = normalizeTeamName(m.homeTeam.name);
+          const a = normalizeTeamName(m.awayTeam.name);
+          return h === normTeam || a === normTeam || h.includes(normTeam) || a.includes(normTeam);
+      });
+
+      teamMatches.sort((a, b) => new Date(b.utcDate).getTime() - new Date(a.utcDate).getTime());
+
+      return teamMatches.slice(0, limit).map(m => {
+          const isHome = normalizeTeamName(m.homeTeam.name).includes(normTeam) || normalizeTeamName(m.homeTeam.name) === normTeam;
+          const scoreHome = m.score.fullTime.home;
+          const scoreAway = m.score.fullTime.away;
+          const score = `${scoreHome}-${scoreAway}`;
+          
+          let result: 'W'|'D'|'L' = 'D';
+          let color = 'bg-neutral-600'; 
+          let tooltip = `Pareggio (${score})`;
+
+          if (isHome) {
+              if (scoreHome > scoreAway) {
+                  result = 'W';
+                  if (scoreHome - scoreAway > 1) {
+                      color = 'bg-green-600 border border-green-400 shadow-[0_0_5px_#22c55e]';
+                      tooltip = `Vittoria Netta (${score})`;
+                  } else {
+                      color = 'bg-yellow-500 text-black border border-yellow-300';
+                      tooltip = `Vittoria Risicata (${score})`;
+                  }
+              } else if (scoreHome < scoreAway) {
+                  result = 'L';
+                  color = 'bg-red-600 border border-red-400';
+                  tooltip = `Sconfitta (${score})`;
+              } else {
+                  // Draw
+                  if (scoreHome > 1) {
+                      color = 'bg-orange-500 text-black border border-orange-300';
+                      tooltip = `Pareggio Spettacolo (${score})`;
+                  } else {
+                      color = 'bg-neutral-600 border border-neutral-500'; // 0-0, 1-1
+                  }
+              }
+          } else {
+              if (scoreAway > scoreHome) {
+                  result = 'W';
+                  if (scoreAway - scoreHome > 1) {
+                      color = 'bg-green-600 border border-green-400 shadow-[0_0_5px_#22c55e]'; 
+                      tooltip = `Vittoria Netta (${score})`;
+                  } else {
+                      color = 'bg-yellow-500 text-black border border-yellow-300';
+                      tooltip = `Vittoria Risicata (${score})`;
+                  }
+              } else if (scoreAway < scoreHome) {
+                  result = 'L';
+                  color = 'bg-red-600 border border-red-400';
+                  tooltip = `Sconfitta (${score})`;
+              } else {
+                   if (scoreAway > 1) {
+                      color = 'bg-orange-500 text-black border border-orange-300';
+                      tooltip = `Pareggio Spettacolo (${score})`;
+                  } else {
+                      color = 'bg-neutral-600 border border-neutral-500';
+                  }
+              }
+          }
+          
+          return { result, score, color, tooltip };
+      }).reverse(); // Mostra cronologicamente da sinistra a destra (Old -> New)
+  },
+
   getMatchContext: (homeTeamName: string, awayTeamName: string): string => {
     const standings = StorageService.getStandings();
     const matches: FootballDataMatch[] = localStorage.getItem(KEYS.SEASON_MATCHES) ? JSON.parse(localStorage.getItem(KEYS.SEASON_MATCHES) || '[]') : [];
@@ -408,7 +487,7 @@ export const StorageService = {
     }
     
     // --- 4. NEWS ---
-    const medKeywords = ['infortunio', 'squalifica', 'out', 'indisponibile', 'non convocato', 'salta', 'stop', 'lesione'];
+    const medKeywords = ['infortunio', 'squalifica', 'out', 'indisponibile', 'non convocato', 'salta', 'stop', 'lesione', 'turnover', 'panchina', 'riserve'];
     const filterNews = (normTeam: string) => news.filter(n => {
          const txt = (n.title + n.description).toLowerCase();
          if (!txt.includes(normTeam)) return false;
@@ -419,7 +498,7 @@ export const StorageService = {
     const awayNews = filterNews(normAway);
 
     if (homeNews.length > 0 || awayNews.length > 0) {
-        context += `\n=== NEWS NOTEVOLI ===\n`;
+        context += `\n=== NEWS NOTEVOLI (POSSIBILE TURNOVER/ASSENZE) ===\n`;
         if(homeNews.length > 0) homeNews.slice(0,3).forEach(n => context += `- ${n.title}\n`);
         if(awayNews.length > 0) awayNews.slice(0,3).forEach(n => context += `- ${n.title}\n`);
     }
