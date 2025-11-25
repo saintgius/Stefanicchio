@@ -1,8 +1,9 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { Button } from './Button';
 import { BetSelection } from '../types';
-import { Trash2, Plus, Ticket, X, ChevronDown, Calculator, AlertTriangle, ShieldAlert, BrainCircuit, Eraser, Check, ArrowDown } from 'lucide-react';
+import { Trash2, Plus, Ticket, X, ChevronDown, Calculator, AlertTriangle, ShieldAlert, BrainCircuit, Eraser, Check, ArrowDown, Share2, Copy } from 'lucide-react';
 import { StorageService } from '../services/storage';
 import { GeminiService } from '../services/gemini';
 
@@ -42,6 +43,9 @@ export const BetSlip: React.FC<BetSlipProps> = ({
   const [tiltMessage, setTiltMessage] = useState('');
   const [showTiltModal, setShowTiltModal] = useState(false);
   const [tiltCooldown, setTiltCooldown] = useState(10);
+  
+  // Share State
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
       const br = StorageService.getBankrollSettings();
@@ -89,13 +93,11 @@ export const BetSlip: React.FC<BetSlipProps> = ({
     };
 
     onAddSelection(newSelection);
-    // Clear inputs to allow adding next
     setInputMatch('');
     setInputSelection('');
     setInputOdds('');
   };
 
-  // --- TILT CHECK LOGIC ---
   const checkTilt = async () => {
       const stats = StorageService.getStats();
       const closedBets = stats.bets.filter(b => b.result !== 'PENDING');
@@ -151,10 +153,24 @@ export const BetSlip: React.FC<BetSlipProps> = ({
       });
   };
 
+  const handleShare = () => {
+      let text = "🚀 *RedZone Bet Slip* 🚀\n\n";
+      currentSelections.forEach((sel, i) => {
+          text += `⚽ ${sel.match}\n🎯 ${sel.selection} @${sel.odds.toFixed(2)}\n\n`;
+      });
+      text += `💰 *Quota Totale: ${totalOdds.toFixed(2)}*\n`;
+      text += `💸 Puntata: ${stake}€\n`;
+      text += `🏆 Potenziale: ${potentialReturn.toFixed(2)}€\n`;
+      
+      navigator.clipboard.writeText(text).then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+      });
+  };
+
   return (
     <div className={`fixed inset-0 z-[100] bg-darkbg/95 backdrop-blur flex items-center justify-center p-4 animate-fade-in ${tiltDetected ? 'border-4 border-red-600' : ''}`}>
       
-      {/* TILT MODAL (Safety Layer) */}
       {showTiltModal && (
          <div className="absolute inset-0 z-[150] bg-black/95 flex flex-col items-center justify-center p-8 text-center animate-pulse-fast">
             <ShieldAlert size={80} className="text-red-600 mb-6" />
@@ -175,10 +191,8 @@ export const BetSlip: React.FC<BetSlipProps> = ({
          </div>
       )}
 
-      {/* MAIN CARD */}
       <div className="w-full max-w-lg bg-cardbg border border-neutral-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         
-        {/* HEADER */}
         <div className="bg-neutral-900 p-4 flex justify-between items-center border-b border-neutral-800">
           <div className="flex items-center gap-2">
             <Ticket className={isMultiple ? "text-purple-500" : "text-blue-500"} size={24} />
@@ -197,10 +211,8 @@ export const BetSlip: React.FC<BetSlipProps> = ({
           </div>
         </div>
 
-        {/* SCROLLABLE CONTENT */}
         <div className="flex-1 overflow-y-auto p-4 space-y-6">
             
-            {/* 1. CURRENT SELECTIONS LIST */}
             {currentSelections.length > 0 && (
                 <div className="space-y-2">
                     <div className="flex justify-between items-end mb-1 px-1">
@@ -232,7 +244,6 @@ export const BetSlip: React.FC<BetSlipProps> = ({
                 </div>
             )}
 
-            {/* 2. ADD NEW EVENT FORM */}
             <div className={`bg-neutral-900/30 rounded-xl p-4 border-2 ${currentSelections.length === 0 ? 'border-dashed border-neutral-700' : 'border-neutral-800'}`}>
                 <h3 className="text-xs font-bold text-neutral-400 uppercase mb-3 flex items-center gap-2">
                     <Plus size={14} /> {currentSelections.length === 0 ? 'Aggiungi Primo Evento' : 'Aggiungi Altro Evento'}
@@ -286,22 +297,29 @@ export const BetSlip: React.FC<BetSlipProps> = ({
             </div>
         </div>
 
-        {/* FOOTER - CONFIRMATION */}
         <div className="bg-neutral-900 border-t border-neutral-800 p-5">
              
-             {/* Odds Summary */}
              <div className="flex justify-between items-center mb-4 px-1">
                  <div className="text-xs text-neutral-400 uppercase font-bold">Quota Totale</div>
-                 <div className="text-2xl font-black text-white font-mono">{currentSelections.length > 0 ? totalOdds.toFixed(2) : '0.00'}</div>
+                 <div className="flex items-center gap-3">
+                     <button 
+                        onClick={handleShare}
+                        className="text-[10px] text-neutral-400 flex items-center gap-1 hover:text-white transition-colors"
+                     >
+                         {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />} 
+                         {copied ? "COPIATO" : "COPIA TESTO"}
+                     </button>
+                     <div className="text-2xl font-black text-white font-mono">{currentSelections.length > 0 ? totalOdds.toFixed(2) : '0.00'}</div>
+                 </div>
              </div>
 
-             {/* Stake Input & Kelly */}
              <div className="flex gap-4 mb-4">
                  <div className="flex-1">
                     <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500">€</span>
                         <input 
                             type="number" 
+                            step="0.01"
                             value={stake}
                             onChange={e => setStake(Number(e.target.value))}
                             className="w-full bg-black border border-neutral-700 rounded-lg py-3 pl-8 pr-3 text-white font-bold focus:border-white focus:outline-none"

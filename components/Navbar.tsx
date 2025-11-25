@@ -1,9 +1,9 @@
 import React from 'react';
-import { LayoutDashboard, PieChart, Settings, Newspaper } from 'lucide-react';
+import { LayoutDashboard, PieChart, Settings, Newspaper, ScanLine } from 'lucide-react';
 
 interface NavbarProps {
-  activeTab: 'dashboard' | 'report' | 'settings' | 'news';
-  setActiveTab: (tab: 'dashboard' | 'report' | 'settings' | 'news') => void;
+  activeTab: 'dashboard' | 'report' | 'settings' | 'news' | 'scanner';
+  setActiveTab: (tab: 'dashboard' | 'report' | 'settings' | 'news' | 'scanner') => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
@@ -12,15 +12,23 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
       <div className="flex justify-around items-center h-16 max-w-2xl mx-auto">
         <button 
           onClick={() => setActiveTab('dashboard')}
-          className={`flex flex-col items-center gap-1 w-1/4 ${activeTab === 'dashboard' ? 'text-redzone-500' : 'text-neutral-500'}`}
+          className={`flex flex-col items-center gap-1 w-1/5 ${activeTab === 'dashboard' ? 'text-redzone-500' : 'text-neutral-500'}`}
         >
           <LayoutDashboard size={20} />
           <span className="text-[9px] font-bold tracking-widest uppercase">Mercato</span>
         </button>
+
+        <button 
+          onClick={() => setActiveTab('scanner')}
+          className={`flex flex-col items-center gap-1 w-1/5 ${activeTab === 'scanner' ? 'text-redzone-500' : 'text-neutral-500'}`}
+        >
+          <ScanLine size={20} />
+          <span className="text-[9px] font-bold tracking-widest uppercase">Scanner</span>
+        </button>
         
         <button 
           onClick={() => setActiveTab('news')}
-          className={`flex flex-col items-center gap-1 w-1/4 ${activeTab === 'news' ? 'text-redzone-500' : 'text-neutral-500'}`}
+          className={`flex flex-col items-center gap-1 w-1/5 ${activeTab === 'news' ? 'text-redzone-500' : 'text-neutral-500'}`}
         >
           <Newspaper size={20} />
           <span className="text-[9px] font-bold tracking-widest uppercase">Notizie</span>
@@ -28,7 +36,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
         
         <button 
           onClick={() => setActiveTab('report')}
-          className={`flex flex-col items-center gap-1 w-1/4 ${activeTab === 'report' ? 'text-redzone-500' : 'text-neutral-500'}`}
+          className={`flex flex-col items-center gap-1 w-1/5 ${activeTab === 'report' ? 'text-redzone-500' : 'text-neutral-500'}`}
         >
           <PieChart size={20} />
           <span className="text-[9px] font-bold tracking-widest uppercase">Report</span>
@@ -36,7 +44,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
 
         <button 
           onClick={() => setActiveTab('settings')}
-          className={`flex flex-col items-center gap-1 w-1/4 ${activeTab === 'settings' ? 'text-redzone-500' : 'text-neutral-500'}`}
+          className={`flex flex-col items-center gap-1 w-1/5 ${activeTab === 'settings' ? 'text-redzone-500' : 'text-neutral-500'}`}
         >
           <Settings size={20} />
           <span className="text-[9px] font-bold tracking-widest uppercase">Setup</span>

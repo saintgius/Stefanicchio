@@ -1,4 +1,5 @@
 
+
 import { GoogleGenAI, Type, Schema } from '@google/genai';
 import { AnalysisResult, RiskLevel, OracleEvent } from '../types';
 
@@ -58,48 +59,41 @@ export const GeminiService = {
       required: ["prediction", "risk_level", "recommended_bet", "reasoning", "confidence_score", "exact_score", "bet_1x2", "risky_bet", "risky_reasoning", "prediction_multigol", "prediction_over_under", "prediction_goalscorer", "prediction_combo", "tactical_insight", "key_duels", "manager_duel", "stadium_atmosphere", "best_value_market", "market_reasoning", "max_drawdown"]
     };
 
-    // CALCOLO MATEMATICO PRE-PROMPT (Base Statistica)
-    const lowestOdd = Math.min(odds.home, odds.away);
-    const favoriteOdd = odds.home < odds.away ? odds.home : odds.away;
-    const isSuperFavorite = favoriteOdd < 1.35; // Probabilità > 74%
-    const isBalanced = Math.abs(odds.home - odds.away) < 0.50; // Match equilibrato
-
     let prompt = `Sei il miglior analista calcistico al mondo. Stefanicchio si fida di te.
     Analizza il match: ${homeTeam} vs ${awayTeam} (${competition}).
     
     QUOTE: 1(${odds.home}) | X(${odds.draw}) | 2(${odds.away}).
     
     === MATCH DNA PROFILING (INTELLIGENZA ADATTIVA) ===
-    Non applicare regole fisse per la lega. Analizza lo STILE DELLE SQUADRE in campo.
-    
     1. STILE OFFENSIVO vs DIFENSIVO:
        - Guarda i gol fatti e subiti nel contesto.
-       - Se due squadre segnano molto (es. Milan, Atalanta), prevedi gol anche se è Serie A.
-       - Se due squadre sono chiuse (es. Juve, Torino), rispetta l'Under.
+       - Se due squadre segnano molto, prevedi gol.
+       - Se due squadre sono chiuse, rispetta l'Under.
     
     2. DISPARITÀ TECNICA:
-       - Se c'è una super favorita (quota < 1.40) E l'avversario subisce molto -> GOLEADA POSSIBILE.
-       - Se c'è una super favorita MA l'avversario difende bene -> VITTORIA STRETTA (1-0, 2-0).
+       - Super favorita (< 1.40) + Avversario debole in difesa = GOLEADA.
+       - Super favorita + Avversario solido = 1-0/2-0.
        
     3. CHECK COLABRODO:
-       - Controlla nelle "Ultime 5 partite" se una squadra ha subito 3+ gol di recente. Se sì, aumenta la probabilità di Over.
+       - Controlla "Ultime 5 partite" nel contesto. Se subiscono 3+ gol spesso, aumenta probabilità Over.
 
-    === REGOLA D'ORO SUI GIOCATORI (ANTI-ALLUCINAZIONE) ===
-    NEL CONTESTO TROVERAI LA SEZIONE "*** CANNONIERI UFFICIALI (DA API) ***".
-    DEVI USARE QUEI NOMI E QUEI DATI PER CITARE I GIOCATORI CHIAVE E I MARCATORI.
-    NON USARE LA TUA MEMORIA STORICA. SE IL CONTESTO DICE "ORSOLINI 10 GOL", ORSOLINI È IL PERICOLO NUMERO 1.
+    === REGOLA SUPREMA ANTI-ALLUCINAZIONE GIOCATORI ===
+    1. LEGGI LA SEZIONE "*** CANNONIERI UFFICIALI ***" E "ROSA COMPLETA" NEL CONTESTO SOTTOSTANTE.
+    2. USA SOLO I NOMI PRESENTI IN QUELLE LISTE.
+    3. SE NON TROVI DATI SU UN GIOCATORE, NON INVENTARE GOL O FORMA.
+    4. SE IL CONTESTO DICE "ORSOLINI 10 GOL", DEVI CITARE ORSOLINI.
 
     === LA MATRICE DEI 10 FATTORI ===
     1. DISPARITÀ TECNICA: Valore rosa.
-    2. STATO DI FORMA: Ultime 5 gare (Vedi contesto).
+    2. STATO DI FORMA: Ultime 5 gare.
     3. FATTORE CAMPO: ${homeTeam} in casa.
-    4. INFERMERIA: Assenze chiave (Vedi news).
-    5. MOTIVAZIONI: Classifica attuale.
+    4. INFERMERIA: Assenze (Vedi news e contesto).
+    5. MOTIVAZIONI: Classifica.
     6. TATTICA: Scontro stili.
-    7. STORICO (H2H): Precedenti stagionali.
+    7. STORICO (H2H): Precedenti.
     8. CALENDARIO: Turnover?
     9. METEO: ${weatherContext || "N/D"}.
-    10. DATI GOL: Media gol fatti/subiti REALE.
+    10. DATI GOL: Media gol reale.
 
     === CONTESTO REALE (CLASSIFICA, MARCATORI, ROSE, PRECEDENTI) ===
     ${richContext}
@@ -122,7 +116,7 @@ export const GeminiService = {
         config: {
           responseMimeType: "application/json",
           responseSchema: schema,
-          systemInstruction: "Sei un analista calcistico tattico. Basi tutto sui dati forniti nel prompt, specialmente per i marcatori. Non inventi statistiche.",
+          systemInstruction: "Sei un analista calcistico esperto. Non inventi mai statistiche. Usi solo i dati forniti nel contesto (marcatori, classifiche).",
         }
       });
 
@@ -160,6 +154,60 @@ export const GeminiService = {
     }
   },
 
+  scanTicket: async (apiKey: string, imageBase64: string): Promise<any> => {
+      const ai = new GoogleGenAI({ apiKey });
+      
+      const schema: Schema = {
+          type: Type.OBJECT,
+          properties: {
+              bets: {
+                  type: Type.ARRAY,
+                  items: {
+                      type: Type.OBJECT,
+                      properties: {
+                          match: { type: Type.STRING },
+                          selection: { type: Type.STRING },
+                          odds: { type: Type.NUMBER }
+                      },
+                      required: ["match", "selection", "odds"]
+                  }
+              },
+              totalStake: { type: Type.NUMBER },
+              totalOdds: { type: Type.NUMBER }
+          },
+          required: ["bets", "totalStake", "totalOdds"]
+      };
+
+      try {
+          const response = await ai.models.generateContent({
+              model: 'gemini-2.5-flash',
+              contents: [
+                  {
+                      inlineData: {
+                          mimeType: 'image/jpeg',
+                          data: imageBase64
+                      }
+                  },
+                  {
+                      text: "Analizza questa immagine di una schedina/scommessa calcistica. Estrai i dettagli. Se non trovi lo Stake (Puntata), metti 0."
+                  }
+              ],
+              config: {
+                  responseMimeType: "application/json",
+                  responseSchema: schema
+              }
+          });
+
+          if (response.text) {
+              return JSON.parse(response.text);
+          }
+          return null;
+      } catch (e) {
+          console.error("OCR Error", e);
+          throw new Error("Impossibile leggere la schedina.");
+      }
+  },
+
   simulateMatch: async (
     apiKey: string,
     homeTeam: string,
@@ -189,8 +237,7 @@ export const GeminiService = {
       ${context}
       
       Genera 6-8 eventi chiave in ordine cronologico.
-      Se nel contesto una squadra è molto più forte (classifica/forma), la simulazione DEVE riflettere questo dominio.
-      Se sono vicine in classifica, crea un match combattuto.
+      Se nel contesto una squadra è molto più forte, rifletti questo dominio.
     `;
 
     try {
@@ -238,6 +285,87 @@ export const GeminiService = {
           return response.text || "Scommessa persa. Analisi non disponibile.";
       } catch (e) {
           return "Analisi non disponibile.";
+      }
+  },
+
+  generateSmartSlip: async (
+      apiKey: string,
+      matchesList: string,
+      criteria: { stake: number, multiplier: number, risk: string, league: string }
+  ): Promise<any> => {
+      const ai = new GoogleGenAI({ apiKey });
+      
+      const schema: Schema = {
+          type: Type.OBJECT,
+          properties: {
+             bets: {
+                 type: Type.ARRAY,
+                 items: {
+                     type: Type.OBJECT,
+                     properties: {
+                         match: { type: Type.STRING },
+                         selection: { type: Type.STRING },
+                         odds: { type: Type.NUMBER },
+                         reason: { type: Type.STRING }
+                     },
+                     required: ["match", "selection", "odds", "reason"]
+                 }
+             },
+             totalOdds: { type: Type.NUMBER },
+             strategyName: { type: Type.STRING }
+          },
+          required: ["bets", "totalOdds", "strategyName"]
+      };
+
+      const prompt = `
+          Sei un Bookmaker/Tipster professionista. Genera una schedina vincente.
+          
+          CRITERI UTENTE:
+          - Budget: ${criteria.stake}€
+          - Obiettivo Moltiplicatore: x${criteria.multiplier}
+          - Rischio: ${criteria.risk}
+          - Competizione: ${criteria.league}
+          
+          LISTA PARTITE E QUOTE 1X2 DISPONIBILI:
+          ${matchesList}
+          
+          ISTRUZIONI CRITICHE (MERCATI VARIABILI):
+          1. NON limitarti all'1X2. Devi spaziare tra i mercati per trovare valore.
+          2. PUOI SUGGERIRE:
+             - Multigol (es. 1-3, 2-4, 2-5)
+             - Goal / No Goal
+             - Under / Over (1.5, 2.5, 3.5)
+             - Doppia Chance (1X, X2, 12)
+             - Combo (es. 1X + Over 1.5)
+          
+          3. STIMA DELLE QUOTE:
+             - Poiché hai solo le quote 1X2 in input, devi *STIMARE* realisticamente la quota del mercato alternativo basandoti sui rapporti di forza.
+             - Esempio: Se la Favorita è a 1.30, l'Over 2.5 sarà circa 1.50-1.60.
+             - Esempio: Se è un match equilibrato (2.80 - 3.00 - 2.80), l'Under 2.5 o Goal sarà circa 1.70-1.80.
+             - Sii conservativo nelle stime.
+
+          4. COSTRUZIONE SCHEDINA:
+             - Seleziona le 3-6 partite migliori per raggiungere la quota totale obiettivo (x${criteria.multiplier}).
+             - Motiva ogni scelta in poche parole.
+      `;
+
+      try {
+          const response = await ai.models.generateContent({
+              model: 'gemini-2.5-flash',
+              contents: prompt,
+              config: {
+                  responseMimeType: "application/json",
+                  responseSchema: schema
+              }
+          });
+          
+          if (response.text) {
+              return JSON.parse(response.text);
+          }
+          return null;
+      } catch (e) {
+          console.error("Smart Generator Error", e);
+          throw new Error("Impossibile generare schedina.");
       }
   }
 };

@@ -1,5 +1,5 @@
 
-import { BetRecord, UserStats, LeagueStanding, FootballDataMatch, TopScorer, TeamSquad } from '../types';
+import { BetRecord, UserStats, LeagueStanding, FootballDataMatch, TopScorer, TeamSquad, ProcessedMatch } from '../types';
 import { NewsArticle } from './news';
 
 const KEYS = {
@@ -17,7 +17,8 @@ const KEYS = {
   LAST_BACKUP_DATE: 'rz_last_backup_date',
   BANKROLL: 'rz_bankroll',
   OPENING_ODDS: 'rz_opening_odds',
-  CACHED_NEWS: 'rz_cached_news'
+  CACHED_NEWS: 'rz_cached_news',
+  UPCOMING_MATCHES: 'rz_upcoming_matches' // NEW KEY
 };
 
 // Advanced Normalization
@@ -196,6 +197,37 @@ export const StorageService = {
     const openingOdds = storedData ? JSON.parse(storedData) : {};
     return openingOdds[matchId] || null;
   },
+
+  // --- UPCOMING MATCHES MANAGEMENT FOR SCANNER ---
+  saveUpcomingMatches: (matches: ProcessedMatch[]) => {
+      // Get existing matches to merge (in case we switch leagues and want to keep both)
+      // For simplicity/safety, let's keep a "fresh" list or merge by ID.
+      // A simple merge is safer to have a pool of matches.
+      const stored = localStorage.getItem(KEYS.UPCOMING_MATCHES);
+      let currentPool: ProcessedMatch[] = stored ? JSON.parse(stored) : [];
+      
+      // Filter out old matches from pool first
+      const now = new Date();
+      currentPool = currentPool.filter(m => new Date(m.startTime) > now);
+
+      // Merge new matches
+      const newIds = new Set(matches.map(m => m.id));
+      const merged = [
+          ...currentPool.filter(m => !newIds.has(m.id)),
+          ...matches
+      ];
+
+      // Sort by time
+      merged.sort((a,b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+
+      localStorage.setItem(KEYS.UPCOMING_MATCHES, JSON.stringify(merged));
+  },
+
+  getUpcomingMatches: (): ProcessedMatch[] => {
+      const data = localStorage.getItem(KEYS.UPCOMING_MATCHES);
+      return data ? JSON.parse(data) : [];
+  },
+  // ----------------------------------------------
 
   saveFootballData: (standings: LeagueStanding[], matches: FootballDataMatch[], scorers: TopScorer[], squads?: TeamSquad[]) => {
     localStorage.setItem(KEYS.STANDINGS, JSON.stringify(standings));
@@ -541,7 +573,7 @@ export const StorageService = {
 
     const backupData: any = {
       meta: {
-        version: '2.8',
+        version: '2.9',
         timestamp: now,
         app: 'RedZoneBet'
       },
@@ -562,7 +594,8 @@ export const StorageService = {
         scorers: localStorage.getItem(KEYS.SCORERS) ? JSON.parse(localStorage.getItem(KEYS.SCORERS) || '[]') : [],
         squads: localStorage.getItem(KEYS.SQUADS) ? JSON.parse(localStorage.getItem(KEYS.SQUADS) || '[]') : [],
         lastSync: localStorage.getItem(KEYS.LAST_FOOTBALL_SYNC),
-        openingOdds: localStorage.getItem(KEYS.OPENING_ODDS) ? JSON.parse(localStorage.getItem(KEYS.OPENING_ODDS) || '{}') : {}
+        openingOdds: localStorage.getItem(KEYS.OPENING_ODDS) ? JSON.parse(localStorage.getItem(KEYS.OPENING_ODDS) || '{}') : {},
+        upcomingMatches: localStorage.getItem(KEYS.UPCOMING_MATCHES) ? JSON.parse(localStorage.getItem(KEYS.UPCOMING_MATCHES) || '[]') : []
       },
       newsCache: localStorage.getItem(KEYS.CACHED_NEWS) ? JSON.parse(localStorage.getItem(KEYS.CACHED_NEWS) || '[]') : [],
       cache: {}
@@ -605,6 +638,7 @@ export const StorageService = {
         if (backup.footballData.squads) localStorage.setItem(KEYS.SQUADS, JSON.stringify(backup.footballData.squads));
         if (backup.footballData.lastSync) localStorage.setItem(KEYS.LAST_FOOTBALL_SYNC, backup.footballData.lastSync);
         if (backup.footballData.openingOdds) localStorage.setItem(KEYS.OPENING_ODDS, JSON.stringify(backup.footballData.openingOdds));
+        if (backup.footballData.upcomingMatches) localStorage.setItem(KEYS.UPCOMING_MATCHES, JSON.stringify(backup.footballData.upcomingMatches));
       }
       
       if (backup.newsCache) {

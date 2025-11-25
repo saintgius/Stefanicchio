@@ -1,4 +1,5 @@
 
+
 import { OddsData, ProcessedMatch, HistoricalMatch } from '../types';
 
 const BASE_URL = 'https://api.the-odds-api.com/v4/sports';
@@ -6,6 +7,7 @@ const BASE_URL = 'https://api.the-odds-api.com/v4/sports';
 export const OddsService = {
   fetchMatches: async (apiKey: string, sportKey: string = 'soccer_italy_serie_a'): Promise<ProcessedMatch[]> => {
     try {
+      // Fetch odds from ALL available bookmakers to find the best prices
       const response = await fetch(`${BASE_URL}/${sportKey}/odds?regions=eu&markets=h2h&apiKey=${apiKey}`);
       
       if (!response.ok) {
@@ -15,12 +17,24 @@ export const OddsService = {
       const data: OddsData[] = await response.json();
 
       const processed = data.map(match => {
-        const h2h = match.bookmakers[0]?.markets.find(m => m.key === 'h2h')?.outcomes;
-        
-        // Find odds safely
-        const homeOdd = h2h?.find(o => o.name === match.home_team)?.price || 0;
-        const awayOdd = h2h?.find(o => o.name === match.away_team)?.price || 0;
-        const drawOdd = h2h?.find(o => o.name === 'Draw')?.price || 0;
+        // Initialize best odds tracking
+        let bestHome = { price: 0, provider: 'N/A' };
+        let bestDraw = { price: 0, provider: 'N/A' };
+        let bestAway = { price: 0, provider: 'N/A' };
+
+        // Iterate all bookmakers to find the "Super Bookmaker" odds
+        match.bookmakers.forEach(bookie => {
+            const h2h = bookie.markets.find(m => m.key === 'h2h')?.outcomes;
+            if (h2h) {
+                const home = h2h.find(o => o.name === match.home_team)?.price;
+                const away = h2h.find(o => o.name === match.away_team)?.price;
+                const draw = h2h.find(o => o.name === 'Draw')?.price;
+
+                if (home && home > bestHome.price) bestHome = { price: home, provider: bookie.title };
+                if (away && away > bestAway.price) bestAway = { price: away, provider: bookie.title };
+                if (draw && draw > bestDraw.price) bestDraw = { price: draw, provider: bookie.title };
+            }
+        });
 
         // Create consistent ID
         const matchDate = new Date(match.commence_time).toISOString().split('T')[0];
@@ -32,14 +46,19 @@ export const OddsService = {
           awayTeam: match.away_team,
           startTime: match.commence_time,
           odds: {
-            home: homeOdd,
-            draw: drawOdd,
-            away: awayOdd
+            home: bestHome.price,
+            draw: bestDraw.price,
+            away: bestAway.price
+          },
+          providers: {
+            home: bestHome.provider,
+            draw: bestDraw.provider,
+            away: bestAway.provider
           }
         };
       });
 
-      // Sort by date ascending for "Next Matchday" filtering
+      // Sort by date ascending
       return processed.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
 
     } catch (error) {

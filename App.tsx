@@ -1,9 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dashboard } from './pages/Dashboard';
 import { Report } from './pages/Report';
 import { Settings } from './pages/Settings';
 import { News } from './pages/News';
+import { Scanner } from './pages/Scanner';
 import { Navbar } from './components/Navbar';
 import { StorageService } from './services/storage';
 import { BetSlip } from './components/BetSlip';
@@ -12,7 +12,7 @@ import { Ticket } from 'lucide-react';
 
 function App() {
   const [keys, setKeys] = useState<{ oddsKey: string | null, geminiKey: string | null, footballKey: string | null }>({ oddsKey: null, geminiKey: null, footballKey: null });
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'report' | 'settings' | 'news'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'report' | 'settings' | 'news' | 'scanner'>('dashboard');
   
   // Global Bet Slip State
   const [isBetSlipOpen, setIsBetSlipOpen] = useState(false);
@@ -77,6 +77,10 @@ function App() {
           />
         </div>
         
+        <div style={{ display: activeTab === 'scanner' ? 'block' : 'none' }}>
+           <Scanner onSaveBet={handleSaveBet} />
+        </div>
+        
         <div style={{ display: activeTab === 'news' ? 'block' : 'none' }}>
            <News />
         </div>
@@ -96,27 +100,26 @@ function App() {
       
       {/* FLOATING SLIP BUTTON (When Minimized) */}
       {!isBetSlipOpen && slipSelections.length > 0 && (
-          <button 
+         <button 
             onClick={() => setIsBetSlipOpen(true)}
-            className="fixed bottom-20 right-4 z-40 bg-redzone-600 text-white p-4 rounded-full shadow-[0_0_20px_rgba(220,38,38,0.5)] border-2 border-redzone-500 animate-bounce-small flex items-center gap-2"
-          >
+            className="fixed bottom-24 right-4 z-40 bg-redzone-600 text-white p-3 rounded-full shadow-[0_0_20px_rgba(220,38,38,0.5)] flex items-center justify-center animate-bounce border border-red-500"
+         >
              <Ticket size={24} />
-             <span className="absolute -top-1 -right-1 bg-white text-redzone-600 text-xs font-black w-5 h-5 flex items-center justify-center rounded-full border border-redzone-600">
+             <span className="absolute -top-2 -right-2 bg-white text-red-600 text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center border border-red-600 shadow-sm">
                  {slipSelections.length}
              </span>
-          </button>
+         </button>
       )}
-      
-      {/* Global Bet Slip Overlay */}
+
       {isBetSlipOpen && (
           <BetSlip 
-            currentSelections={slipSelections}
-            onAddSelection={(sel) => setSlipSelections(prev => [...prev, sel])}
-            onRemoveSelection={handleRemoveFromSlip}
-            onClearSlip={handleClearSlip}
-            onSave={handleSaveBet} 
-            onClose={() => setIsBetSlipOpen(false)} 
-            onMinimize={() => setIsBetSlipOpen(false)}
+             currentSelections={slipSelections}
+             onAddSelection={(sel) => setSlipSelections(prev => [...prev, sel])}
+             onRemoveSelection={handleRemoveFromSlip}
+             onClearSlip={handleClearSlip}
+             onSave={handleSaveBet}
+             onClose={() => setIsBetSlipOpen(false)}
+             onMinimize={() => setIsBetSlipOpen(false)}
           />
       )}
 

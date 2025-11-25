@@ -65,6 +65,8 @@ export interface OddsData {
   away_team: string;
   commence_time: string;
   bookmakers: {
+    key: string;
+    title: string;
     markets: {
       key: string;
       outcomes: {
@@ -80,10 +82,17 @@ export interface ProcessedMatch {
   homeTeam: string;
   awayTeam: string;
   startTime: string;
+  // Now stores the BEST odds found across all bookmakers
   odds: {
     home: number;
     draw: number;
     away: number;
+  };
+  // Stores the name of the bookmaker offering the best price
+  providers: {
+    home: string;
+    draw: string;
+    away: string;
   };
 }
 
@@ -192,6 +201,15 @@ export interface TeamSquad {
       name: string;
       nationality?: string;
   };
+}
+
+export interface ArbitrageOpportunity {
+    match: string;
+    home: { price: number, bookie: string };
+    draw: { price: number, bookie: string };
+    away: { price: number, bookie: string };
+    margin: number; // e.g., 98.5 (Surebet) or 105.2 (Normal)
+    profitPercentage: number; // e.g. 1.5%
 }
 
 export const BET_CATEGORIES = ['1X2', 'Under/Over', 'Goal/NoGoal', 'Angoli', 'Cartellini', 'Marcatori', 'Combo', 'Multipla'];

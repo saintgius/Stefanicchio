@@ -121,6 +121,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
       
       const allMatches = await OddsService.fetchMatches(oddsKey, config.oddsKey);
       
+      // CRITICAL: Save these matches with full data (date/time) to storage for the Scanner to use
+      StorageService.saveUpcomingMatches(allMatches);
+
       refreshContextData(true); 
 
       if (allMatches.length > 0) {
@@ -343,10 +346,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
                 league={activeLeague} // Pass league info for styling
                 onDeleteAnalysis={() => {
                     StorageService.deleteAnalysis(match.id);
-                    // Force a single card refresh by key update? 
-                    // Or simpler: let the parent re-render handle it if needed, but Delete in card updates local state.
-                    // If we need global refresh on single delete, we need state lift. 
-                    // But MatchCard handles its own delete UI well.
                 }}
                 onAddToSlip={onAddToSlip}
                 dropPercentage={dropAlerts[match.id]}
@@ -371,7 +370,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
           100% { transform: translateX(-100%); }
         }
         .animate-marquee {
-          animation: marquee 80s linear infinite;
+          animation: marquee 160s linear infinite;
         }
         .hover\\:pause:hover {
             animation-play-state: paused;
