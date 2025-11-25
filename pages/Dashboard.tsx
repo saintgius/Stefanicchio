@@ -6,7 +6,7 @@ import { FootballDataService } from '../services/footballdata';
 import { StorageService } from '../services/storage';
 import { NewsService, NewsArticle } from '../services/news';
 import { ProcessedMatch } from '../types';
-import { RefreshCw, AlertTriangle, CalendarDays, Settings as SettingsIcon, DownloadCloud, BarChart3, Megaphone, Trophy, Shield, Crown, Trash2 } from 'lucide-react';
+import { RefreshCw, AlertTriangle, CalendarDays, Settings as SettingsIcon, DownloadCloud, BarChart3, Megaphone, Trophy, Shield, Crown, Trash2, Quote } from 'lucide-react';
 import { Button } from '../components/Button';
 import { LeagueStatsModal } from '../components/LeagueStatsModal';
 import { TheLock } from '../components/TheLock';
@@ -21,6 +21,63 @@ interface DashboardProps {
 
 type LeagueCode = 'SA' | 'CL';
 
+// STEFANICCHIO'S MOTIVATION DATABASE
+const MOTIVATION_DB = {
+    HYPE: [
+        "Vai Stefanicchio, oggi i bookmaker pagano l'affitto al posto tuo!",
+        "Stefanicchio, sento profumo di CASSA nell'aria.",
+        "Non è scommettere, Stefanicchio. È visione del futuro.",
+        "Stefanicchio, ricordati: la fortuna aiuta gli audaci (e chi studia le stats).",
+        "Oggi sbanchiamo tutto, Stefanicchio. Me lo sento nel codice.",
+        "Stefanicchio, quel moltiplicatore x20 ti sta chiamando. Rispondi!",
+        "Il destino è nelle tue mani, Stefanicchio. E anche la bolletta.",
+        "Stefanicchio, sei a una giocata di distanza dalla gloria.",
+        "Fai vedere all'algoritmo chi comanda, Stefanicchio!",
+        "Stefanicchio, oggi niente 'Under'. Oggi si punta in alto.",
+        "Prepara la valigia Stefanicchio, che con questa schedina andiamo alle Maldive.",
+        "Stefanicchio, il lunedì è triste solo per chi non ha vinto la domenica.",
+        "Hai studiato o vai a sensazione? In ogni caso, credici Stefanicchio!",
+        "Stefanicchio, la quota è alta, ma la tua fede deve essere di più.",
+        "Metticelo quel '2 fisso' a sorpresa, Stefanicchio. Sii eroe."
+    ],
+    WISDOM: [
+        "Testa fredda e quote calde, Stefanicchio. Questa è la via.",
+        "Stefanicchio, non inseguire le perdite. Insegui il Valore.",
+        "Fidati dei dati, Stefanicchio. I numeri non mentono mai (gli arbitri sì).",
+        "Stefanicchio, la multipla è un'arte, e tu sei Michelangelo.",
+        "Meglio un raddoppio oggi che un 'persa per una' domani, vero Stefanicchio?",
+        "Stefanicchio, controlla le formazioni prima di fare follie!",
+        "La pazienza è la virtù dei forti... e di chi aspetta il cashout, Stefanicchio.",
+        "Stefanicchio, gioca responsabile, ma vinci irresponsabilmente.",
+        "Non è fortuna, Stefanicchio. È competenza statistica applicata.",
+        "Stefanicchio, ricordati: la copertura non è da codardi, è da professionisti."
+    ],
+    RESILIENCE: [
+        "Stefanicchio, 'persa per una' fa male, ma ti renderà più forte.",
+        "Rialzati Stefanicchio! Il campionato è lungo.",
+        "Maledetto recupero... ma la prossima entra, Stefanicchio.",
+        "Stefanicchio, anche i migliori sbagliano un rigore.",
+        "Non strappare la schedina, Stefanicchio. È esperienza per la prossima.",
+        "Stefanicchio, il palo è solo un gol che non ci ha creduto abbastanza.",
+        "Asciuga quelle lacrime Stefanicchio, c'è il turno infrasettimanale!",
+        "Era fuorigioco netto, Stefanicchio. Avevi ragione tu.",
+        "Stefanicchio, la ruota gira. E quando gira, noi saremo lì col carrello pieno.",
+        "Non mollare ora Stefanicchio, la Surebet della vita è dietro l'angolo."
+    ],
+    IRONY: [
+        "Stefanicchio, se prendi questa ti offro una cena virtuale.",
+        "Smetti di gufarla agli altri e pensa alla tua, Stefanicchio!",
+        "Stefanicchio, ma l'hai giocata o stai solo guardando?",
+        "Quel pareggio a 3.40 è una trappola, Stefanicchio... o forse no?",
+        "Stefanicchio, spero tu non abbia giocato di nuovo la tua squadra del cuore...",
+        "Se vinci questa, Stefanicchio, voglio il 10% per il consiglio.",
+        "Stefanicchio, quel 'Gol Casa' è più sicuro delle tasse.",
+        "Ci vuole coraggio per quel pronostico, Stefanicchio. Rispetto.",
+        "Stefanicchio, oggi l'Under 2.5 è illegale. Vogliamo spettacolo!",
+        "Stai studiando troppo Stefanicchio, butta 'sto gettone!"
+    ]
+};
+
 export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footballKey, onNavigateSettings, onAddToSlip }) => {
   const [matches, setMatches] = useState<ProcessedMatch[]>([]);
   const [loading, setLoading] = useState(false);
@@ -34,6 +91,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [analysisVersion, setAnalysisVersion] = useState(0); // Used to force re-render of MatchCards
 
+  // Motivation State
+  const [dailyQuote, setDailyQuote] = useState<{text: string, author: string} | null>(null);
+
   // LEAGUE STATE
   const [activeLeague, setActiveLeague] = useState<LeagueCode>('SA');
   
@@ -43,10 +103,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
 
   // THEME COLORS HELPERS
   const isChampions = activeLeague === 'CL';
-  const themeColor = isChampions ? 'blue' : 'redzone'; // Base color name
-  const themeBg = isChampions ? 'bg-blue-600' : 'bg-redzone-600';
-  const themeText = isChampions ? 'text-blue-500' : 'text-redzone-500';
-  const themeBorder = isChampions ? 'border-blue-600' : 'border-redzone-600';
+  const themeBtnClass = isChampions 
+    ? '!bg-blue-600 !hover:bg-blue-500 !border-blue-500 !shadow-[0_0_15px_rgba(37,99,235,0.5)] !text-white' 
+    : 'bg-redzone-600 hover:bg-redzone-500 border-redzone-600 shadow-[0_0_10px_rgba(220,38,38,0.4)]';
 
   // Helper to get codes based on active league
   const getLeagueConfig = (league: LeagueCode) => {
@@ -66,37 +125,57 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
       };
   };
 
-  // SMART SYNC & CONTEXT SWITCHING
-  const refreshContextData = async (force: boolean = false) => {
-      if (!footballKey) return;
+  // MOTIVATIONAL QUOTE GENERATOR - SMART CONTEXT
+  useEffect(() => {
+      const stats = StorageService.getStats();
+      const lastBet = stats.bets.length > 0 ? stats.bets[0] : null;
       
-      const config = getLeagueConfig(activeLeague);
-      const { lastSync } = StorageService.getFootballData(); 
-      const twelveHours = 12 * 60 * 60 * 1000;
+      let category: keyof typeof MOTIVATION_DB = 'HYPE';
       
-      if (force || Date.now() - lastSync > twelveHours) {
-        console.log(`Smart Sync: Scaricando dati contesto per ${config.label}...`);
-        setIsSyncingHistory(true);
-        try {
-          // DOWNLOAD ALL DATA INCLUDING SQUADS (TEAMS)
-          const [standings, matchesHist, scorers, squads] = await Promise.all([
-             FootballDataService.fetchStandings(footballKey, config.footballDataKey),
-             FootballDataService.fetchSeasonMatches(footballKey, config.footballDataKey),
-             FootballDataService.fetchTopScorers(footballKey, config.footballDataKey),
-             FootballDataService.fetchTeams(footballKey, config.footballDataKey)
-          ]);
-          
-          StorageService.saveFootballData(standings, matchesHist, scorers, squads);
-          console.log("Smart Sync: Contesto Aggiornato (inclusi Rose/Squads).");
-        } catch (e) {
-          console.error("Smart Sync Failed:", e);
-        } finally {
-          setIsSyncingHistory(false);
-        }
+      if (lastBet) {
+          if (lastBet.result === 'LOSS') {
+              // Se l'ultima è persa, o Resilienza o Ironia (50/50)
+              category = Math.random() > 0.5 ? 'RESILIENCE' : 'IRONY';
+          } else if (lastBet.result === 'WIN') {
+              // Se vinta, Saggezza o Hype
+              category = Math.random() > 0.5 ? 'WISDOM' : 'HYPE';
+          }
       }
-  };
 
-  // NEWS FETCH LOGIC - Updates when Active League Changes
+      const phrases = MOTIVATION_DB[category];
+      const selectedPhrase = phrases[Math.floor(Math.random() * phrases.length)];
+
+      const squads = StorageService.getSquads();
+      let author = "Il Mister";
+      let teamName = "";
+      
+      // Try to find a random player from stored squads
+      if (squads && squads.length > 0) {
+          const validTeams = squads.filter(t => t.squad && t.squad.length > 0);
+          if (validTeams.length > 0) {
+              const randomTeam = validTeams[Math.floor(Math.random() * validTeams.length)];
+              const randomPlayer = randomTeam.squad[Math.floor(Math.random() * randomTeam.squad.length)];
+              author = randomPlayer.name;
+              teamName = randomTeam.name;
+          } else {
+               const legends = ["Zlatan Ibrahimovic", "Jose Mourinho", "Carlo Ancelotti", "Francesco Totti", "Pep Guardiola"];
+               author = legends[Math.floor(Math.random() * legends.length)];
+               teamName = "Leggenda";
+          }
+      } else {
+           const legends = ["Zlatan Ibrahimovic", "Jose Mourinho", "Carlo Ancelotti", "Francesco Totti", "Pep Guardiola"];
+           author = legends[Math.floor(Math.random() * legends.length)];
+           teamName = "Leggenda";
+      }
+
+      setDailyQuote({
+          text: selectedPhrase,
+          author: `${author} (${teamName})`
+      });
+
+  }, []);
+
+  // NEWS FETCH LOGIC
   useEffect(() => {
       const { newsKey } = StorageService.getKeys();
       if (newsKey) {
@@ -121,10 +200,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
       
       const allMatches = await OddsService.fetchMatches(oddsKey, config.oddsKey);
       
-      // CRITICAL: Save these matches with full data (date/time) to storage for the Scanner to use
       StorageService.saveUpcomingMatches(allMatches);
 
-      refreshContextData(true); 
+      // Removed aggressive auto-sync here to prevent 429s. 
+      // Rely on manual sync in Settings or data already cached.
 
       if (allMatches.length > 0) {
         // TRACK OPENING ODDS
@@ -187,7 +266,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
 
   const handleClearAllAnalyses = () => {
       StorageService.clearAllAnalyses();
-      setAnalysisVersion(prev => prev + 1); // Increment version to force re-render of MatchCards
+      setAnalysisVersion(prev => prev + 1); 
       setShowClearConfirm(false);
   };
 
@@ -233,17 +312,30 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
       )}
 
       {/* Stefanicchio Welcome */}
-      <div className="flex items-center justify-between mb-2">
-         <div className="flex items-center gap-2">
-             <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-redzone-600 to-yellow-500 flex items-center justify-center text-white font-bold text-sm shadow-lg">
-                 S
+      <div className="flex flex-col gap-2 mb-2">
+         <div className="flex items-center justify-between">
+             <div className="flex items-center gap-2">
+                 <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-redzone-600 to-yellow-500 flex items-center justify-center text-white font-bold text-sm shadow-lg">
+                     S
+                 </div>
+                 <div>
+                     <div className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest">Bentornato</div>
+                     <h1 className="text-lg font-black text-white leading-none">Stefanicchio</h1>
+                 </div>
              </div>
-             <div>
-                 <div className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest">Bentornato</div>
-                 <h1 className="text-lg font-black text-white leading-none">Stefanicchio</h1>
-             </div>
+             <Crown size={20} className="text-yellow-500 animate-pulse" />
          </div>
-         <Crown size={20} className="text-yellow-500 animate-pulse" />
+
+         {/* MOTIVATIONAL QUOTE BANNER */}
+         {dailyQuote && (
+             <div className="bg-neutral-900/60 border border-neutral-800 p-3 rounded-lg flex gap-3 items-start animate-fade-in">
+                 <Quote size={16} className="text-neutral-600 shrink-0 mt-0.5" />
+                 <div>
+                     <p className="text-xs text-neutral-300 italic leading-snug">"{dailyQuote.text}"</p>
+                     <p className="text-[10px] text-redzone-500 font-bold mt-1 uppercase text-right">— {dailyQuote.author}</p>
+                 </div>
+             </div>
+         )}
       </div>
 
       {/* BREAKING NEWS TICKER */}

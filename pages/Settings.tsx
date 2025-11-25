@@ -1,6 +1,4 @@
 
-
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '../components/Button';
 import { StorageService } from '../services/storage';
@@ -103,7 +101,7 @@ export const Settings: React.FC = () => {
       alert("Impostazioni Bankroll salvate!");
   };
 
-  // SYNC WITH FOOTBALL-DATA.ORG
+  // SYNC WITH FOOTBALL-DATA.ORG - SAFE MODE (SEQUENTIAL)
   const handleSyncFootballData = async () => {
     if (!keys.footballKey) {
       alert("Inserisci prima la Football Data API Key!");
@@ -112,43 +110,52 @@ export const Settings: React.FC = () => {
 
     setHistoryLoading(true);
     setHistoryStatus('idle');
-    setSyncProgress('Avvio...');
+    setSyncProgress('Avvio safe mode...');
     
     try {
+      // Helper to prevent 429 errors
       const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
       // 1. SYNC SERIE A
-      setSyncProgress('Scaricando Serie A...');
-      const [standingsSA, matchesSA, scorersSA, squadsSA] = await Promise.all([
-          FootballDataService.fetchStandings(keys.footballKey, 'SA'),
-          FootballDataService.fetchSeasonMatches(keys.footballKey, 'SA'),
-          FootballDataService.fetchTopScorers(keys.footballKey, 'SA'),
-          FootballDataService.fetchTeams(keys.footballKey, 'SA')
-      ]);
+      setSyncProgress('SA: Classifica...');
+      const standingsSA = await FootballDataService.fetchStandings(keys.footballKey, 'SA');
+      await wait(1500);
 
-      // Rate limit protection - wait 2 seconds before next batch
-      await wait(2000); 
+      setSyncProgress('SA: Partite...');
+      const matchesSA = await FootballDataService.fetchSeasonMatches(keys.footballKey, 'SA');
+      await wait(1500);
+
+      setSyncProgress('SA: Marcatori...');
+      const scorersSA = await FootballDataService.fetchTopScorers(keys.footballKey, 'SA');
+      await wait(1500);
+
+      setSyncProgress('SA: Rose...');
+      const squadsSA = await FootballDataService.fetchTeams(keys.footballKey, 'SA');
+      await wait(2000);
 
       // 2. SYNC CHAMPIONS LEAGUE
-      setSyncProgress('Scaricando Champions...');
+      setSyncProgress('CL: Classifica...');
       let standingsCL: any[] = [], matchesCL: any[] = [], scorersCL: any[] = [], squadsCL: any[] = [];
+      
       try {
-          [standingsCL, matchesCL, scorersCL, squadsCL] = await Promise.all([
-              FootballDataService.fetchStandings(keys.footballKey, 'CL'),
-              FootballDataService.fetchSeasonMatches(keys.footballKey, 'CL'),
-              FootballDataService.fetchTopScorers(keys.footballKey, 'CL'),
-              FootballDataService.fetchTeams(keys.footballKey, 'CL')
-          ]);
+        standingsCL = await FootballDataService.fetchStandings(keys.footballKey, 'CL');
+        await wait(1500);
+        
+        setSyncProgress('CL: Partite...');
+        matchesCL = await FootballDataService.fetchSeasonMatches(keys.footballKey, 'CL');
+        await wait(1500);
+        
+        setSyncProgress('CL: Marcatori...');
+        scorersCL = await FootballDataService.fetchTopScorers(keys.footballKey, 'CL');
+        await wait(1500);
+        
+        setSyncProgress('CL: Rose...');
+        squadsCL = await FootballDataService.fetchTeams(keys.footballKey, 'CL');
       } catch (e) {
-          console.warn("Champions League sync failed (might be tier limit), continuing with Serie A data...", e);
+          console.warn("Champions League sync partial fail", e);
       }
 
-      // 3. MERGE DATA (Prioritizing unique entries if needed, but here we just replace or append depending on logic)
-      // For simplicity in this app structure, we might overwrite or merge arrays.
-      // Since StorageService isn't built for complex merging of multiple leagues into one array without IDs clashing,
-      // and the Dashboard handles switching context, we will store the MOST RECENT synced data or MERGE if they are compatible lists.
-      // NOTE: The current StorageService simply overwrites. To support both, we should ideally merge the arrays.
-      
+      // 3. MERGE DATA
       const mergedStandings = [...standingsSA, ...standingsCL];
       const mergedMatches = [...matchesSA, ...matchesCL];
       const mergedScorers = [...scorersSA, ...scorersCL];
@@ -161,7 +168,7 @@ export const Settings: React.FC = () => {
       refreshDataStats(); 
     } catch (e) {
       console.error(e);
-      setSyncProgress('Errore');
+      setSyncProgress('Errore 429/API');
       setHistoryStatus('error');
     } finally {
       setHistoryLoading(false);
