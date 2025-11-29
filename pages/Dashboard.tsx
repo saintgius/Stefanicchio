@@ -3,6 +3,8 @@
 
 
 
+
+
 import React, { useEffect, useState } from 'react';
 import { MatchCard } from '../components/MatchCard';
 import { OddsService } from '../services/odds';
@@ -10,7 +12,7 @@ import { FootballDataService } from '../services/footballdata';
 import { StorageService } from '../services/storage';
 import { NewsService, NewsArticle } from '../services/news';
 import { ProcessedMatch } from '../types';
-import { RefreshCw, AlertTriangle, CalendarDays, Settings as SettingsIcon, DownloadCloud, BarChart3, Megaphone, Trophy, Shield, Crown, Trash2, Quote } from 'lucide-react';
+import { RefreshCw, AlertTriangle, CalendarDays, Settings as SettingsIcon, DownloadCloud, BarChart3, Megaphone, Trophy, Shield, Crown, Trash2, Quote, TowerControl } from 'lucide-react';
 import { Button } from '../components/Button';
 import { LeagueStatsModal } from '../components/LeagueStatsModal';
 import { TheLock } from '../components/TheLock';
@@ -23,7 +25,7 @@ interface DashboardProps {
   onAddToSlip: (match: string, selection: string, odds: number) => void;
 }
 
-type LeagueCode = 'SA' | 'CL';
+type LeagueCode = 'SA' | 'CL' | 'PL';
 
 // STEFANICCHIO'S MOTIVATION DATABASE
 const MOTIVATION_DB = {
@@ -107,10 +109,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
 
   // THEME COLORS HELPERS
   const isChampions = activeLeague === 'CL';
-  const themeBtnClass = isChampions 
-    ? '!bg-blue-600 !hover:bg-blue-500 !border-blue-500 !shadow-[0_0_15px_rgba(37,99,235,0.5)] !text-white' 
-    : 'bg-redzone-600 hover:bg-redzone-500 border-redzone-600 shadow-[0_0_10px_rgba(220,38,38,0.4)]';
-
+  const isPremier = activeLeague === 'PL';
+  
   // Helper to get codes based on active league
   const getLeagueConfig = (league: LeagueCode) => {
       if (league === 'CL') {
@@ -119,6 +119,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
               footballDataKey: 'CL',
               label: 'Champions League',
               newsTopic: 'Champions League'
+          };
+      } else if (league === 'PL') {
+          return {
+              oddsKey: 'soccer_epl',
+              footballDataKey: 'PL',
+              label: 'Premier League',
+              newsTopic: 'Premier League'
           };
       }
       return {
@@ -288,6 +295,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
     );
   }
 
+  // --- THEME ---
+  let themeColor = 'redzone-600';
+  let newsBg = 'bg-redzone-900/20 border-redzone-900/50';
+  let newsIcon = 'text-redzone-500';
+  
+  if (isChampions) {
+      themeColor = 'blue-600';
+      newsBg = 'bg-blue-900/20 border-blue-900/50';
+      newsIcon = 'text-blue-500';
+  } else if (isPremier) {
+      themeColor = 'purple-600';
+      newsBg = 'bg-purple-900/20 border-purple-900/50';
+      newsIcon = 'text-purple-500';
+  }
+
   return (
     <div className="space-y-6 pb-24 relative">
       
@@ -341,14 +363,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
 
       {/* BREAKING NEWS TICKER */}
       {showNews && news.length > 0 && (
-          <div className={`${isChampions ? 'bg-blue-900/20 border-blue-900/50' : 'bg-redzone-900/20 border-redzone-900/50'} border-y -mx-4 mb-4 overflow-hidden relative h-10 flex items-center shadow-lg transition-colors duration-500`}>
-             <div className={`absolute left-0 z-10 bg-darkbg px-3 h-full flex items-center border-r ${isChampions ? 'border-blue-900/50' : 'border-redzone-900/50'} shadow-[5px_0_15px_rgba(0,0,0,0.8)]`}>
-                <Megaphone size={16} className={`${isChampions ? 'text-blue-500' : 'text-redzone-500'} animate-pulse`} />
+          <div className={`${newsBg} border-y -mx-4 mb-4 overflow-hidden relative h-10 flex items-center shadow-lg transition-colors duration-500`}>
+             <div className={`absolute left-0 z-10 bg-darkbg px-3 h-full flex items-center border-r ${isChampions ? 'border-blue-900/50' : isPremier ? 'border-purple-900/50' : 'border-redzone-900/50'} shadow-[5px_0_15px_rgba(0,0,0,0.8)]`}>
+                <Megaphone size={16} className={`${newsIcon} animate-pulse`} />
              </div>
              <div className="whitespace-nowrap animate-marquee flex items-center gap-12 pl-4 hover:pause cursor-default">
                 {news.map((item, idx) => (
                    <span key={idx} className="text-xs font-bold text-white uppercase tracking-wide inline-flex items-center">
-                      <span className={`${isChampions ? 'text-blue-500' : 'text-redzone-500'} mr-2 text-sm`}>🚨</span>
+                      <span className={`${newsIcon} mr-2 text-sm`}>🚨</span>
                       {item.title}
                    </span>
                 ))}
@@ -357,16 +379,22 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
       )}
 
       {/* LEAGUE SELECTOR TABS */}
-      <div className="grid grid-cols-2 gap-2 bg-neutral-900 p-1 rounded-xl border border-neutral-800">
+      <div className="grid grid-cols-3 gap-2 bg-neutral-900 p-1 rounded-xl border border-neutral-800">
           <button 
              onClick={() => setActiveLeague('SA')}
-             className={`flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-bold transition-all ${activeLeague === 'SA' ? 'bg-cardbg text-white shadow-lg border border-redzone-600' : 'text-neutral-500 hover:text-neutral-300'}`}
+             className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-2 sm:py-3 rounded-lg text-[10px] sm:text-sm font-bold transition-all ${activeLeague === 'SA' ? 'bg-cardbg text-white shadow-lg border border-redzone-600' : 'text-neutral-500 hover:text-neutral-300'}`}
           >
              <Shield size={16} className={activeLeague === 'SA' ? 'text-redzone-500' : ''} /> SERIE A
           </button>
           <button 
+             onClick={() => setActiveLeague('PL')}
+             className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-2 sm:py-3 rounded-lg text-[10px] sm:text-sm font-bold transition-all ${activeLeague === 'PL' ? 'bg-cardbg text-white shadow-lg border border-purple-500' : 'text-neutral-500 hover:text-neutral-300'}`}
+          >
+             <TowerControl size={16} className={activeLeague === 'PL' ? 'text-purple-500' : ''} /> PREMIER
+          </button>
+          <button 
              onClick={() => setActiveLeague('CL')}
-             className={`flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-bold transition-all ${activeLeague === 'CL' ? 'bg-cardbg text-white shadow-lg border border-blue-500' : 'text-neutral-500 hover:text-neutral-300'}`}
+             className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-2 sm:py-3 rounded-lg text-[10px] sm:text-sm font-bold transition-all ${activeLeague === 'CL' ? 'bg-cardbg text-white shadow-lg border border-blue-500' : 'text-neutral-500 hover:text-neutral-300'}`}
           >
              <Trophy size={16} className={activeLeague === 'CL' ? 'text-blue-500' : ''} /> CHAMPIONS
           </button>
@@ -375,8 +403,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
       <div className="flex flex-col gap-4 border-b border-neutral-800 pb-4">
         <div className="flex justify-between items-center">
            <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2 text-white">
-            <span className={`w-2 h-8 rounded-sm block shadow-[0_0_10px] ${isChampions ? 'bg-blue-600 shadow-blue-600/50' : 'bg-redzone-600 shadow-red-600/50'}`}></span>
-            {activeLeague === 'CL' ? 'CHAMPIONS LEAGUE' : 'SERIE A'}
+            <span className={`w-2 h-8 rounded-sm block shadow-[0_0_10px] ${isChampions ? 'bg-blue-600 shadow-blue-600/50' : isPremier ? 'bg-purple-600 shadow-purple-600/50' : 'bg-redzone-600 shadow-red-600/50'}`}></span>
+            {activeLeague === 'CL' ? 'CHAMPIONS LEAGUE' : activeLeague === 'PL' ? 'PREMIER LEAGUE' : 'SERIE A'}
           </h2>
           
           <div className="flex gap-2">
@@ -400,7 +428,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
            {dateRange && (
             <div className="text-xs text-neutral-400 font-mono flex items-center gap-1">
               <CalendarDays size={12} /> {dateRange}
-              {isSyncingHistory && <span className={`${isChampions ? 'text-blue-400' : 'text-yellow-500'} flex items-center gap-1 ml-2`}><DownloadCloud size={10} className="animate-bounce"/> Scarico Dati...</span>}
+              {isSyncingHistory && <span className={`${isChampions ? 'text-blue-400' : isPremier ? 'text-purple-400' : 'text-yellow-500'} flex items-center gap-1 ml-2`}><DownloadCloud size={10} className="animate-bounce"/> Scarico Dati...</span>}
             </div>
           )}
           <button 
@@ -426,7 +454,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
 
       {loading && !matches.length ? (
         <div className="flex flex-col items-center justify-center py-20 gap-4">
-           <div className={`w-8 h-8 border-4 border-t-transparent rounded-full animate-spin ${isChampions ? 'border-blue-500' : 'border-redzone-600'}`}></div>
+           <div className={`w-8 h-8 border-4 border-t-transparent rounded-full animate-spin ${isChampions ? 'border-blue-500' : isPremier ? 'border-purple-500' : 'border-redzone-600'}`}></div>
            <div className="text-neutral-500 text-sm animate-pulse font-bold">Stefanicchio sta studiando le quote...</div>
         </div>
       ) : (

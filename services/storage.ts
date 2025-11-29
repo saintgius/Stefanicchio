@@ -1,6 +1,7 @@
 
 
 
+
 import { BetRecord, UserStats, LeagueStanding, FootballDataMatch, TopScorer, TeamSquad, ProcessedMatch } from '../types';
 import { NewsArticle } from './news';
 
@@ -73,6 +74,47 @@ const normalizeTeamName = (name: string): string => {
     'como': 'como',
     'venezia': 'venezia',
 
+    // PREMIER LEAGUE
+    'manchester city': 'manchestercity',
+    'man city': 'manchestercity',
+    'manchester united': 'manchesterunited',
+    'man utd': 'manchesterunited',
+    'liverpool': 'liverpool',
+    'liverpool fc': 'liverpool',
+    'arsenal': 'arsenal',
+    'arsenal fc': 'arsenal',
+    'tottenham hotspur': 'tottenham',
+    'tottenham': 'tottenham',
+    'spurs': 'tottenham',
+    'aston villa': 'astonvilla',
+    'chelsea': 'chelsea',
+    'chelsea fc': 'chelsea',
+    'newcastle united': 'newcastle',
+    'newcastle': 'newcastle',
+    'west ham united': 'westham',
+    'west ham': 'westham',
+    'brighton & hove albion': 'brighton',
+    'brighton': 'brighton',
+    'wolverhampton wanderers': 'wolves',
+    'wolves': 'wolves',
+    'nottingham forest': 'nottingham',
+    'nottingham': 'nottingham',
+    'fulham': 'fulham',
+    'fulham fc': 'fulham',
+    'crystal palace': 'crystalpalace',
+    'brentford': 'brentford',
+    'everton': 'everton',
+    'everton fc': 'everton',
+    'luton town': 'luton',
+    'burnley': 'burnley',
+    'sheffield united': 'sheffield',
+    'leicester city': 'leicester',
+    'leicester': 'leicester',
+    'ipswich town': 'ipswich',
+    'ipswich': 'ipswich',
+    'southampton': 'southampton',
+    'southampton fc': 'southampton',
+
     // CHAMPIONS / EUROPE
     'real madrid': 'realmadrid',
     'real madrid cf': 'realmadrid',
@@ -81,13 +123,6 @@ const normalizeTeamName = (name: string): string => {
     'atlético madrid': 'atleticomadrid',
     'atletico madrid': 'atleticomadrid',
     'girona': 'girona',
-    'manchester city': 'manchestercity',
-    'man city': 'manchestercity',
-    'arsenal': 'arsenal',
-    'arsenal fc': 'arsenal',
-    'liverpool': 'liverpool',
-    'liverpool fc': 'liverpool',
-    'aston villa': 'astonvilla',
     'bayern munich': 'bayernmunchen',
     'bayern munchen': 'bayernmunchen',
     'fc bayern munchen': 'bayernmunchen',
@@ -204,24 +239,18 @@ export const StorageService = {
 
   // --- UPCOMING MATCHES MANAGEMENT FOR SCANNER ---
   saveUpcomingMatches: (matches: ProcessedMatch[]) => {
-      // Get existing matches to merge (in case we switch leagues and want to keep both)
-      // For simplicity/safety, let's keep a "fresh" list or merge by ID.
-      // A simple merge is safer to have a pool of matches.
       const stored = localStorage.getItem(KEYS.UPCOMING_MATCHES);
       let currentPool: ProcessedMatch[] = stored ? JSON.parse(stored) : [];
       
-      // Filter out old matches from pool first
       const now = new Date();
       currentPool = currentPool.filter(m => new Date(m.startTime) > now);
 
-      // Merge new matches
       const newIds = new Set(matches.map(m => m.id));
       const merged = [
           ...currentPool.filter(m => !newIds.has(m.id)),
           ...matches
       ];
 
-      // Sort by time
       merged.sort((a,b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
 
       localStorage.setItem(KEYS.UPCOMING_MATCHES, JSON.stringify(merged));

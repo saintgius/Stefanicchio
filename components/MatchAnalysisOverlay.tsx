@@ -1,4 +1,6 @@
 
+
+
 import React, { useState, useEffect } from 'react';
 import { AnalysisResult, ProcessedMatch, RiskLevel, FootballDataMatch, WeatherData } from '../types';
 import { StorageService } from '../services/storage';
@@ -18,7 +20,7 @@ interface MatchAnalysisOverlayProps {
   onDelete: () => void;
   onAddToSlip: (match: string, selection: string, odds: number) => void;
   weather: WeatherData | null;
-  league?: 'SA' | 'CL';
+  league?: 'SA' | 'CL' | 'PL'; // NEW PROP
 }
 
 export const MatchAnalysisOverlay: React.FC<MatchAnalysisOverlayProps> = ({ match, analysis, onClose, onDelete, onAddToSlip, weather, league = 'SA' }) => {
@@ -33,9 +35,18 @@ export const MatchAnalysisOverlay: React.FC<MatchAnalysisOverlayProps> = ({ matc
   const [h2hMatches, setH2hMatches] = useState<FootballDataMatch[]>([]);
 
   const isChampions = league === 'CL';
-  const themeText = isChampions ? 'text-blue-500' : 'text-redzone-600';
-  const themeBorder = isChampions ? 'border-blue-600' : 'border-redzone-600';
-  const themeAccent = isChampions ? 'bg-blue-600' : 'bg-redzone-600';
+  const isPremier = league === 'PL';
+  
+  let themeText = 'text-redzone-600';
+  let themeBorder = 'border-redzone-600';
+  
+  if (isChampions) {
+      themeText = 'text-blue-500';
+      themeBorder = 'border-blue-600';
+  } else if (isPremier) {
+      themeText = 'text-purple-500';
+      themeBorder = 'border-purple-600';
+  }
 
   useEffect(() => {
     // New Advanced Form Logic
@@ -119,7 +130,7 @@ export const MatchAnalysisOverlay: React.FC<MatchAnalysisOverlayProps> = ({ matc
           <h2 className="font-black text-lg leading-none uppercase tracking-tight">
             WAR ROOM <span className={themeText}>AI</span>
           </h2>
-          <p className="text-xs text-neutral-500 font-mono mt-1">{match.homeTeam} vs {match.awayTeam} <span className="opacity-50 mx-1">|</span> {isChampions ? 'UCL' : 'SA'}</p>
+          <p className="text-xs text-neutral-500 font-mono mt-1">{match.homeTeam} vs {match.awayTeam} <span className="opacity-50 mx-1">|</span> {isChampions ? 'UCL' : isPremier ? 'PL' : 'SA'}</p>
         </div>
         <div className="flex gap-2">
           <button onClick={onClose} className="bg-neutral-800 p-2 rounded-full hover:bg-neutral-700 transition-colors text-white">
@@ -175,7 +186,7 @@ export const MatchAnalysisOverlay: React.FC<MatchAnalysisOverlayProps> = ({ matc
               
               <div className="relative z-10">
                   <div className="flex justify-between items-start mb-4">
-                    <span className={`${isChampions ? 'bg-blue-900/30 text-blue-500 border-blue-900/50' : 'bg-redzone-900/30 text-redzone-500 border-redzone-900/50'} border px-3 py-1 rounded text-xs font-bold uppercase tracking-wider flex items-center gap-2`}>
+                    <span className={`${isChampions ? 'bg-blue-900/30 text-blue-500 border-blue-900/50' : isPremier ? 'bg-purple-900/30 text-purple-500 border-purple-900/50' : 'bg-redzone-900/30 text-redzone-500 border-redzone-900/50'} border px-3 py-1 rounded text-xs font-bold uppercase tracking-wider flex items-center gap-2`}>
                       <Zap size={12} /> Consigliata
                     </span>
                     <span className={`font-mono font-bold ${getRiskColor(analysis.risk_level)} flex items-center gap-2 text-xs`}>
@@ -261,7 +272,7 @@ export const MatchAnalysisOverlay: React.FC<MatchAnalysisOverlayProps> = ({ matc
             {/* DEEP TACTICAL INSIGHT */}
             <div className="bg-cardbg border border-neutral-800 rounded-xl p-5">
                <div className="flex items-center gap-2 mb-4 pb-2 border-b border-neutral-800">
-                 <FileText size={18} className={isChampions ? 'text-blue-400' : 'text-red-400'} />
+                 <FileText size={18} className={isChampions ? 'text-blue-400' : isPremier ? 'text-purple-400' : 'text-red-400'} />
                  <h3 className="font-bold text-white text-sm uppercase">Analisi Tattica Profonda</h3>
                </div>
                <div className="text-sm text-neutral-300 leading-relaxed space-y-2 whitespace-pre-line">
@@ -472,7 +483,7 @@ export const MatchAnalysisOverlay: React.FC<MatchAnalysisOverlayProps> = ({ matc
 
             {/* EXACT SCORE BOARD */}
             <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-6 flex flex-col items-center justify-center relative overflow-hidden">
-                <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent ${isChampions ? 'via-blue-600' : 'via-yellow-600'} to-transparent`}></div>
+                <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent ${isChampions ? 'via-blue-600' : isPremier ? 'via-purple-600' : 'via-yellow-600'} to-transparent`}></div>
                 <span className="text-[10px] font-bold uppercase text-neutral-500 mb-2 tracking-widest">Risultato Esatto</span>
                 <div className="text-5xl font-black text-white tracking-tighter neon-text">
                   {analysis.exact_score || "-:-"}

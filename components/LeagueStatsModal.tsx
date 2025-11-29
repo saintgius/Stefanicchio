@@ -1,6 +1,8 @@
 
 
 
+
+
 import React, { useState, useEffect } from 'react';
 import { StorageService } from '../services/storage';
 import { LeagueStanding, TopScorer } from '../types';
@@ -8,7 +10,7 @@ import { X, Trophy, Target } from 'lucide-react';
 
 interface LeagueStatsModalProps {
   onClose: () => void;
-  league: 'SA' | 'CL'; // NEW PROP
+  league: 'SA' | 'CL' | 'PL'; // NEW PROP
 }
 
 export const LeagueStatsModal: React.FC<LeagueStatsModalProps> = ({ onClose, league }) => {
@@ -37,8 +39,18 @@ export const LeagueStatsModal: React.FC<LeagueStatsModalProps> = ({ onClose, lea
   };
   
   const isChampions = league === 'CL';
-  const themeColor = isChampions ? 'text-blue-500' : 'text-yellow-500';
-  const borderTheme = isChampions ? 'border-blue-500' : 'border-yellow-500';
+  const isPremier = league === 'PL';
+  
+  let themeColor = 'text-yellow-500';
+  let borderTheme = 'border-yellow-500';
+  
+  if (isChampions) {
+      themeColor = 'text-blue-500';
+      borderTheme = 'border-blue-500';
+  } else if (isPremier) {
+      themeColor = 'text-purple-500';
+      borderTheme = 'border-purple-500';
+  }
 
   return (
     <div className="fixed inset-0 z-[100] bg-darkbg/95 backdrop-blur flex flex-col animate-fade-in">
@@ -46,7 +58,7 @@ export const LeagueStatsModal: React.FC<LeagueStatsModalProps> = ({ onClose, lea
       {/* Header */}
       <div className="p-4 border-b border-neutral-800 flex justify-between items-center bg-neutral-900">
         <h2 className="font-bold text-lg text-white flex items-center gap-2">
-          <Trophy size={18} className={themeColor} /> STATISTICHE {isChampions ? 'CHAMPIONS LEAGUE' : 'SERIE A'}
+          <Trophy size={18} className={themeColor} /> STATISTICHE {isChampions ? 'CHAMPIONS LEAGUE' : isPremier ? 'PREMIER LEAGUE' : 'SERIE A'}
         </h2>
         <button onClick={onClose} className="bg-neutral-800 p-2 rounded-full hover:text-white">
           <X size={20} />
@@ -73,9 +85,9 @@ export const LeagueStatsModal: React.FC<LeagueStatsModalProps> = ({ onClose, lea
       <div className="flex-1 overflow-y-auto p-0">
         {(activeTab === 'standings' && standings.length === 0) || (activeTab === 'scorers' && scorers.length === 0) ? (
             <div className="flex flex-col items-center justify-center h-64 text-neutral-500 text-sm p-8 text-center">
-                <p className="mb-4">Nessun dato disponibile per {isChampions ? 'la Champions League' : 'la Serie A'}.</p>
+                <p className="mb-4">Nessun dato disponibile per {isChampions ? 'la Champions League' : isPremier ? 'la Premier League' : 'la Serie A'}.</p>
                 <div className="p-3 bg-red-900/20 border border-red-900 rounded-lg text-red-400 text-xs">
-                    ⚠️ Vai in Impostazioni e clicca <br/> <strong>"SINCRONIZZA (SA + CL)"</strong> <br/> per aggiornare il database.
+                    ⚠️ Vai in Impostazioni e clicca <br/> <strong>"SINCRONIZZA (SA+PL+CL)"</strong> <br/> per aggiornare il database.
                 </div>
             </div>
         ) : (

@@ -143,7 +143,7 @@ export interface LeagueStanding {
   goalsAgainst: number;
   goalDifference: number;
   form: string; // es. "W,W,D,L,W"
-  league?: 'SA' | 'CL'; // ADDED TAG
+  league?: 'SA' | 'CL' | 'PL'; // ADDED TAG
 }
 
 export interface TopScorer {
@@ -158,7 +158,7 @@ export interface TopScorer {
   goals: number;
   assists: number | null;
   penalties: number | null;
-  league?: 'SA' | 'CL'; // ADDED TAG
+  league?: 'SA' | 'CL' | 'PL'; // ADDED TAG
 }
 
 export interface FootballDataMatch {

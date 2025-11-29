@@ -1,6 +1,4 @@
 
-
-
 import { GoogleGenAI, Type, Schema } from '@google/genai';
 import { AnalysisResult, RiskLevel, OracleEvent } from '../types';
 
@@ -63,10 +61,39 @@ export const GeminiService = {
       required: ["prediction", "risk_level", "recommended_bet", "reasoning", "confidence_score", "exact_score", "bet_1x2", "risky_bet", "risky_reasoning", "prediction_multigol", "prediction_over_under", "prediction_goalscorer", "prediction_combo", "tactical_insight", "key_duels", "manager_duel", "stadium_atmosphere", "best_value_market", "market_reasoning", "max_drawdown", "referee_analysis"]
     };
 
+    // --- LEAGUE SPECIFIC LOGIC (THE BRAIN) ---
+    let leagueContext = "";
+    if (competition.includes('Premier')) {
+        leagueContext = `
+        [[[ MODALITÀ PREMIER LEAGUE ATTIVA ]]]
+        - FISICA E RITMO: Qui non si gestisce. Si corre per 90 minuti. I ribaltoni finali sono frequenti.
+        - FATTORE CASA: Gli stadi inglesi spingono. Le piccole in casa possono aggredire le grandi.
+        - ARBITRAGGIO: Si fischia meno ("Let it flow"). Meno falli tattici, più intensità.
+        - GOL: Tendenza all'Over e al "Goal" (Entrambe segnano) più alta rispetto all'Italia.
+        - ALLENATORI: Analizza lo scontro tra filosofie (es. Pep Guardiola vs Calcio diretto).
+        `;
+    } else if (competition.includes('Champions')) {
+        leagueContext = `
+        [[[ MODALITÀ CHAMPIONS LEAGUE ATTIVA ]]]
+        - DNA EUROPEO: Real, Bayern, Liverpool si trasformano. La storia conta.
+        - DOPPIO CONFRONTO: Se è un ritorno, considera l'andata.
+        - DIFFERENZA RETI: Spesso c'è un divario tecnico enorme nei gironi/fase lega -> Goleade possibili.
+        `;
+    } else {
+        leagueContext = `
+        [[[ MODALITÀ SERIE A ATTIVA ]]]
+        - TATTICISMO: Le difese vincono le partite. L'1-0 è un risultato sacro.
+        - GESTIONE: Chi va in vantaggio tende a chiudersi (Catenaccio moderno).
+        - PAREGGI: Il pareggio tattico è un risultato molto più frequente che in Premier.
+        `;
+    }
+
     let prompt = `Sei il miglior analista calcistico al mondo. Stefanicchio si fida di te.
     Analizza il match: ${homeTeam} vs ${awayTeam} (${competition}).
     
     QUOTE: 1(${odds.home}) | X(${odds.draw}) | 2(${odds.away}).
+    
+    ${leagueContext}
     
     === MATCH DNA PROFILING (INTELLIGENZA ADATTIVA) ===
     1. STILE OFFENSIVO vs DIFENSIVO:
@@ -75,8 +102,8 @@ export const GeminiService = {
        - Se due squadre sono chiuse, rispetta l'Under.
     
     2. DISPARITÀ TECNICA:
-       - Super favorita (< 1.40) + Avversario debole in difesa = GOLEADA.
-       - Super favorita + Avversario solido = 1-0/2-0.
+       - Super favorita (< 1.40) + Avversario debole in difesa = GOLEADA (specialmente in Premier/Champions).
+       - Super favorita + Avversario solido = 1-0/2-0 (specialmente in Serie A).
        
     3. CHECK COLABRODO:
        - Controlla "Ultime 5 partite" nel contesto. Se subiscono 3+ gol spesso, aumenta probabilità Over.
@@ -110,6 +137,7 @@ export const GeminiService = {
     COMPITI FINALI:
     - Sii specifico. Usa i nomi dei marcatori forniti nel contesto.
     - Se prevedi un risultato alto, giustificalo con i dati difensivi del contesto.
+    - Usa un linguaggio tecnico ma diretto (Stile Stefanicchio).
     `;
 
     if (isFavoriteInvolved) {

@@ -1,6 +1,8 @@
 
 
 
+
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '../components/Button';
 import { StorageService } from '../services/storage';
@@ -139,7 +141,33 @@ export const Settings: React.FC = () => {
       const standingsSA_Tagged = standingsSA.map(s => ({...s, league: 'SA' as const}));
       const scorersSA_Tagged = scorersSA.map(s => ({...s, league: 'SA' as const}));
 
-      // 2. SYNC CHAMPIONS LEAGUE
+      // 2. SYNC PREMIER LEAGUE (PL)
+      setSyncProgress('PL: Classifica...');
+      let standingsPL: any[] = [], matchesPL: any[] = [], scorersPL: any[] = [], squadsPL: any[] = [];
+      
+      try {
+        standingsPL = await FootballDataService.fetchStandings(keys.footballKey, 'PL');
+        await wait(1500);
+        
+        setSyncProgress('PL: Partite...');
+        matchesPL = await FootballDataService.fetchSeasonMatches(keys.footballKey, 'PL');
+        await wait(1500);
+        
+        setSyncProgress('PL: Marcatori...');
+        scorersPL = await FootballDataService.fetchTopScorers(keys.footballKey, 'PL');
+        await wait(1500);
+        
+        setSyncProgress('PL: Rose...');
+        squadsPL = await FootballDataService.fetchTeams(keys.footballKey, 'PL');
+        await wait(2000);
+      } catch (e) {
+        console.warn("Premier League sync partial fail", e);
+      }
+      
+      const standingsPL_Tagged = standingsPL.map(s => ({...s, league: 'PL' as const}));
+      const scorersPL_Tagged = scorersPL.map(s => ({...s, league: 'PL' as const}));
+
+      // 3. SYNC CHAMPIONS LEAGUE
       setSyncProgress('CL: Classifica...');
       let standingsCL: any[] = [], matchesCL: any[] = [], scorersCL: any[] = [], squadsCL: any[] = [];
       
@@ -165,11 +193,11 @@ export const Settings: React.FC = () => {
       const standingsCL_Tagged = standingsCL.map(s => ({...s, league: 'CL' as const}));
       const scorersCL_Tagged = scorersCL.map(s => ({...s, league: 'CL' as const}));
 
-      // 3. MERGE DATA
-      const mergedStandings = [...standingsSA_Tagged, ...standingsCL_Tagged];
-      const mergedMatches = [...matchesSA, ...matchesCL]; // Matches normally have competition info inside
-      const mergedScorers = [...scorersSA_Tagged, ...scorersCL_Tagged];
-      const mergedSquads = [...squadsSA, ...squadsCL];
+      // 4. MERGE DATA
+      const mergedStandings = [...standingsSA_Tagged, ...standingsPL_Tagged, ...standingsCL_Tagged];
+      const mergedMatches = [...matchesSA, ...matchesPL, ...matchesCL]; 
+      const mergedScorers = [...scorersSA_Tagged, ...scorersPL_Tagged, ...scorersCL_Tagged];
+      const mergedSquads = [...squadsSA, ...squadsPL, ...squadsCL];
 
       StorageService.saveFootballData(mergedStandings, mergedMatches, mergedScorers, mergedSquads);
       
@@ -431,7 +459,7 @@ export const Settings: React.FC = () => {
                     <Database size={18} className="text-neutral-400" /> Dati Context (Storico)
                 </h2>
                 <p className="text-neutral-400 text-xs mt-1">
-                    Cache Locale per SA e CL.
+                    Cache Locale per SA, PL e CL.
                 </p>
             </div>
             {dataStats.lastSync > 0 && (
@@ -458,7 +486,7 @@ export const Settings: React.FC = () => {
             className="text-xs flex-1"
             disabled={!keys.footballKey}
           >
-            <RefreshCcw size={14} /> {historyLoading ? (syncProgress || 'AGGIORNAMENTO...') : 'SINCRONIZZA (SA + CL)'}
+            <RefreshCcw size={14} /> {historyLoading ? (syncProgress || 'AGGIORNAMENTO...') : 'SINCRONIZZA (SA+PL+CL)'}
           </Button>
           
           {historyStatus === 'success' && <div className="text-green-500 text-xs flex items-center gap-1 font-bold"><CheckCircle size={16} /> Ok!</div>}

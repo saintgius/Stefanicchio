@@ -16,9 +16,9 @@ export interface NewsArticle {
 export const NewsService = {
     fetchNews: async (apiKey: string, topic: string = 'ALL'): Promise<NewsArticle[]> => {
         try {
-            // Query espansa per includere Big Europee e termini specifici Champions
-            const teams = '"Inter" OR "Milan" OR "Juventus" OR "Roma" OR "Napoli" OR "Real Madrid" OR "Manchester City" OR "Barcelona" OR "Bayern Munich" OR "PSG" OR "Arsenal" OR "Liverpool" OR "Atletico Madrid"';
-            const competitions = '"Serie A" OR "Champions League" OR "UEFA" OR "Coppa Italia"';
+            // Query espansa per includere Big Europee e termini specifici Champions e Premier
+            const teams = '"Inter" OR "Milan" OR "Juventus" OR "Roma" OR "Napoli" OR "Real Madrid" OR "Manchester City" OR "Barcelona" OR "Bayern Munich" OR "PSG" OR "Arsenal" OR "Liverpool" OR "Atletico Madrid" OR "Chelsea" OR "Manchester United" OR "Tottenham" OR "Aston Villa" OR "Newcastle" OR "Everton"';
+            const competitions = '"Serie A" OR "Champions League" OR "UEFA" OR "Coppa Italia" OR "Premier League"';
             const keywords = 'calcio OR gol OR infortunio OR formazioni OR conferenza';
 
             // Costruzione query bilanciata
@@ -40,9 +40,11 @@ export const NewsService = {
                 const txt = (a.title + a.description).toLowerCase();
                 let detTopic = 'SERIE A';
                 
-                // Detection più aggressiva per Champions
-                if (txt.includes('champions') || txt.includes('uefa') || txt.includes('real') || txt.includes('city') || txt.includes('bayern') || txt.includes('psg') || txt.includes('barcellona') || txt.includes('arsenal') || txt.includes('liverpool') || txt.includes('atletico')) {
+                // Detection più aggressiva per Champions e PL
+                if (txt.includes('champions') || txt.includes('uefa') || txt.includes('real') || txt.includes('bayern') || txt.includes('psg') || txt.includes('barcellona') || txt.includes('atletico')) {
                     detTopic = 'CHAMPIONS';
+                } else if (txt.includes('premier league') || txt.includes('arsenal') || txt.includes('liverpool') || txt.includes('city') || txt.includes('united') || txt.includes('chelsea') || txt.includes('tottenham') || txt.includes('aston villa') || txt.includes('newcastle')) {
+                    detTopic = 'PREMIER';
                 }
                 return { ...a, topic: detTopic };
             });

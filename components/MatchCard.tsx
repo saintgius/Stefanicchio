@@ -1,17 +1,19 @@
+
+
 import React, { useState, useEffect, useRef } from 'react';
 import { ProcessedMatch, AnalysisResult, RiskLevel, WeatherData } from '../types';
 import { StorageService } from '../services/storage';
 import { GeminiService } from '../services/gemini';
 import { WeatherService } from '../services/weather';
 import { Button } from './Button';
-import { BrainCircuit, CheckCircle, ChevronRight, Trash2, Flame, Sparkles, CloudRain, Wind, Sun, Cloud, CloudSnow, Gem, Star } from 'lucide-react';
+import { BrainCircuit, CheckCircle, ChevronRight, Trash2, Flame, Sparkles, CloudRain, Wind, Sun, Cloud, CloudSnow, Gem, Star, TowerControl } from 'lucide-react';
 import { MatchAnalysisOverlay } from './MatchAnalysisOverlay';
 import { OracleOverlay } from './OracleOverlay';
 
 interface MatchCardProps {
   match: ProcessedMatch;
   geminiKey: string | null;
-  league?: 'SA' | 'CL'; // NEW PROP
+  league?: 'SA' | 'CL' | 'PL'; // NEW PROP
   onDeleteAnalysis?: () => void;
   onAddToSlip?: (match: string, selection: string, odds: number) => void;
   dropPercentage?: number;
@@ -26,11 +28,15 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, geminiKey, league =
   const [weather, setWeather] = useState<WeatherData | null>(null);
   
   const isChampions = league === 'CL';
+  const isPremier = league === 'PL';
   
-  // Stefanicchio's Blue Button for Champions - FIXED with !important overrides
-  const themeBtnClass = isChampions 
-    ? '!bg-blue-600 !hover:bg-blue-500 !border-blue-500 !shadow-[0_0_15px_rgba(37,99,235,0.5)] !text-white' 
-    : 'bg-redzone-600 hover:bg-redzone-500 border-redzone-600 shadow-[0_0_10px_rgba(220,38,38,0.4)]';
+  // Stefanicchio's Blue Button for Champions / Purple for Premier
+  let themeBtnClass = 'bg-redzone-600 hover:bg-redzone-500 border-redzone-600 shadow-[0_0_10px_rgba(220,38,38,0.4)]';
+  if (isChampions) {
+      themeBtnClass = '!bg-blue-600 !hover:bg-blue-500 !border-blue-500 !shadow-[0_0_15px_rgba(37,99,235,0.5)] !text-white';
+  } else if (isPremier) {
+      themeBtnClass = '!bg-purple-600 !hover:bg-purple-500 !border-purple-500 !shadow-[0_0_15px_rgba(147,51,234,0.5)] !text-white';
+  }
   
   // Oracle State
   const [showOracle, setShowOracle] = useState(false);
@@ -96,13 +102,15 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, geminiKey, league =
               const text = (article.title + article.description).toLowerCase();
               return homeTerms.some(t => t.length > 3 && text.includes(t.toLowerCase())) || 
                      awayTerms.some(t => t.length > 3 && text.includes(t.toLowerCase())) ||
-                     text.includes(league === 'CL' ? 'champions' : 'serie a');
+                     text.includes(league === 'CL' ? 'champions' : league === 'PL' ? 'premier' : 'serie a');
           });
 
           if (relevantNews.length > 0) {
               newsContext = relevantNews.slice(0, 5).map(n => `- ${n.title} (${n.publishedAt.split('T')[0]})`).join('\n');
           }
       }
+
+      const compName = league === 'CL' ? 'Champions League' : league === 'PL' ? 'Premier League' : 'Serie A';
 
       const result = await GeminiService.analyzeMatch(
         geminiKey, 
@@ -113,7 +121,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, geminiKey, league =
         richContext,
         weatherContext,
         newsContext,
-        league === 'CL' ? 'Champions League' : 'Serie A'
+        compName
       );
 
       StorageService.saveAnalysis(match.id, result);
@@ -233,8 +241,8 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, geminiKey, league =
         <div className="flex justify-between items-center mb-4">
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
-                <span className={`text-[10px] font-bold px-1.5 rounded ${isChampions ? 'bg-blue-900/50 text-blue-400 border border-blue-900' : 'bg-neutral-800 text-neutral-400'}`}>
-                    {isChampions ? <span className="flex items-center gap-1"><Star size={8} fill="currentColor"/> UCL</span> : 'SA'}
+                <span className={`text-[10px] font-bold px-1.5 rounded ${isChampions ? 'bg-blue-900/50 text-blue-400 border border-blue-900' : isPremier ? 'bg-purple-900/50 text-purple-400 border border-purple-900' : 'bg-neutral-800 text-neutral-400'}`}>
+                    {isChampions ? <span className="flex items-center gap-1"><Star size={8} fill="currentColor"/> UCL</span> : isPremier ? <span className="flex items-center gap-1"><TowerControl size={8} /> PL</span> : 'SA'}
                 </span>
                 <span className="text-xs text-neutral-500 font-mono">{new Date(match.startTime).toLocaleString('it-IT', {day: 'numeric', month: 'short', hour: '2-digit', minute:'2-digit'})}</span>
                 {dropPercentage && dropPercentage > 5 && (
