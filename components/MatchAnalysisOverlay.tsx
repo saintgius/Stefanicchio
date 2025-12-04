@@ -17,7 +17,7 @@ interface MatchAnalysisOverlayProps {
   onDelete: () => void;
   onAddToSlip: (match: string, selection: string, odds: number) => void;
   weather: WeatherData | null;
-  league?: 'SA' | 'CL' | 'PL';
+  league?: 'SA' | 'CL' | 'PL' | 'LL';
 }
 
 export const MatchAnalysisOverlay: React.FC<MatchAnalysisOverlayProps> = ({ match, analysis, onClose, onDelete, onAddToSlip, weather, league = 'SA' }) => {

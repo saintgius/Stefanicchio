@@ -20,7 +20,7 @@ interface AIInsight {
 
 interface AIInsightsPanelProps {
     matches: ProcessedMatch[];
-    league: 'SA' | 'PL' | 'CL';
+    league: 'SA' | 'PL' | 'CL' | 'LL';
     onSelectMatch?: (matchId: string) => void;
 }
 

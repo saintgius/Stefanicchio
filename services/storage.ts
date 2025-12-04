@@ -153,12 +153,7 @@ const normalizeTeamName = (name: string): string => {
     'slovan bratislava': 'skslovanbratislava',
 
     // LA LIGA (SPAIN)
-    'real madrid': 'realmadrid',
-    'real madrid cf': 'realmadrid',
-    'barcelona': 'barcelona',
-    'fc barcelona': 'barcelona',
-    'atlético madrid': 'atleticomadrid',
-    'atletico madrid': 'atleticomadrid',
+    // Note: Real Madrid, Barcelona, Atletico, Girona are already in CL/Europe section
     'atlético de madrid': 'atleticomadrid',
     'sevilla': 'sevillafc',
     'sevilla fc': 'sevillafc',
@@ -172,7 +167,6 @@ const normalizeTeamName = (name: string): string => {
     'athletic': 'athleticclub',
     'valencia': 'valenciacf',
     'valencia cf': 'valenciacf',
-    'girona': 'gironafc',
     'girona fc': 'gironafc',
     'celta vigo': 'rceltadevigo',
     'celta': 'rceltadevigo',
