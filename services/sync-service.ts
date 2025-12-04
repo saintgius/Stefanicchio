@@ -18,30 +18,34 @@ export const SyncService = {
     syncAll: async (footballKey: string, onProgress?: (msg: string) => void): Promise<void> => {
         if (!footballKey) throw new Error("API Key mancante");
 
+        // IMPORTANT: Football-Data.org free tier = 10 requests/minute
+        // With 4 leagues × 4 endpoints = 16 calls, we need ~7 seconds between calls
         const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+        const API_DELAY = 6500; // 6.5 seconds between calls to stay under rate limit
+
         const log = (msg: string) => {
             if (onProgress) onProgress(msg);
             console.log(`[SyncService] ${msg}`);
         };
 
-        log('Avvio sincronizzazione...');
+        log('Avvio sincronizzazione (attendere ~2 minuti)...');
 
         // 1. SYNC SERIE A
         log('SA: Classifica...');
         const standingsSA = await FootballDataService.fetchStandings(footballKey, 'SA');
-        await wait(1500);
+        await wait(API_DELAY);
 
         log('SA: Partite...');
         const matchesSA = await FootballDataService.fetchSeasonMatches(footballKey, 'SA');
-        await wait(1500);
+        await wait(API_DELAY);
 
         log('SA: Marcatori...');
         const scorersSA = await FootballDataService.fetchTopScorers(footballKey, 'SA');
-        await wait(1500);
+        await wait(API_DELAY);
 
         log('SA: Rose...');
         const squadsSA = await FootballDataService.fetchTeams(footballKey, 'SA');
-        await wait(2000);
+        await wait(API_DELAY);
 
         // TAG SA DATA
         const standingsSA_Tagged = standingsSA.map(s => ({ ...s, league: 'SA' as const }));
@@ -53,19 +57,19 @@ export const SyncService = {
 
         try {
             standingsPL = await FootballDataService.fetchStandings(footballKey, 'PL');
-            await wait(1500);
+            await wait(API_DELAY);
 
             log('PL: Partite...');
             matchesPL = await FootballDataService.fetchSeasonMatches(footballKey, 'PL');
-            await wait(1500);
+            await wait(API_DELAY);
 
             log('PL: Marcatori...');
             scorersPL = await FootballDataService.fetchTopScorers(footballKey, 'PL');
-            await wait(1500);
+            await wait(API_DELAY);
 
             log('PL: Rose...');
             squadsPL = await FootballDataService.fetchTeams(footballKey, 'PL');
-            await wait(2000);
+            await wait(API_DELAY);
         } catch (e) {
             console.warn("Premier League sync partial fail", e);
         }
@@ -79,18 +83,19 @@ export const SyncService = {
 
         try {
             standingsCL = await FootballDataService.fetchStandings(footballKey, 'CL');
-            await wait(1500);
+            await wait(API_DELAY);
 
             log('CL: Partite...');
             matchesCL = await FootballDataService.fetchSeasonMatches(footballKey, 'CL');
-            await wait(1500);
+            await wait(API_DELAY);
 
             log('CL: Marcatori...');
             scorersCL = await FootballDataService.fetchTopScorers(footballKey, 'CL');
-            await wait(1500);
+            await wait(API_DELAY);
 
             log('CL: Rose...');
             squadsCL = await FootballDataService.fetchTeams(footballKey, 'CL');
+            await wait(API_DELAY);
         } catch (e) {
             console.warn("Champions League sync partial fail", e);
         }
