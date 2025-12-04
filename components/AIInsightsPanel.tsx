@@ -40,7 +40,7 @@ export const AIInsightsPanel: React.FC<AIInsightsPanelProps> = ({
     const generateInsights = () => {
         setLoading(true);
         const newInsights: AIInsight[] = [];
-        const standings = StorageService.getStandings(league);
+        const standings = StorageService.getStandings();
 
         matches.forEach(match => {
             try {
@@ -54,7 +54,7 @@ export const AIInsightsPanel: React.FC<AIInsightsPanelProps> = ({
                             title: edge.edge > 10 ? '🔥 Bet of the Day' : '💎 Value Found',
                             description: `${match.homeTeam} vs ${match.awayTeam}: ${edge.market} ha un edge del ${edge.edge.toFixed(1)}%`,
                             match: match.id,
-                            confidence: prediction.confidence_score || 70,
+                            confidence: prediction.confidenceBoost ? Math.min(95, 50 + prediction.confidenceBoost) : 70,
                             odds: edge.market === '1' ? match.odds.home : edge.market === 'X' ? match.odds.draw : match.odds.away,
                             edge: edge.edge,
                         });
