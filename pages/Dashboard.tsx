@@ -5,6 +5,7 @@ import { OddsService } from '../services/odds';
 import { FootballDataService } from '../services/footballdata';
 import { StorageService } from '../services/storage';
 import { NewsService, NewsArticle } from '../services/news';
+import { SyncService } from '../services/sync-service';
 import { ProcessedMatch } from '../types';
 import { RefreshCw, AlertTriangle, CalendarDays, Settings as SettingsIcon, DownloadCloud, BarChart3, Megaphone, Trophy, Shield, Crown, Trash2, Quote, TowerControl, Star } from 'lucide-react';
 import { Button } from '../components/Button';
@@ -227,6 +228,32 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
     useEffect(() => {
         fetchMatches();
     }, [activeLeague, oddsKey]);
+
+    // AUTOMATIC SYNC LOGIC
+    useEffect(() => {
+        const checkAndSync = async () => {
+            if (!footballKey) return;
+
+            const isStale = SyncService.isStale();
+            if (isStale) {
+                console.log("[Dashboard] Data is stale, starting auto-sync...");
+                try {
+                    await SyncService.syncAll(footballKey);
+                    console.log("[Dashboard] Auto-sync completed.");
+                    // Force re-render or data refresh if needed
+                } catch (e) {
+                    console.error("[Dashboard] Auto-sync failed", e);
+                }
+            }
+        };
+
+        // Check on mount
+        checkAndSync();
+
+        // Check every minute
+        const interval = setInterval(checkAndSync, 60000);
+        return () => clearInterval(interval);
+    }, [footballKey]);
 
     const handleRefresh = () => {
         fetchMatches();

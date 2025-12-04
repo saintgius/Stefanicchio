@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '../components/Button';
 import { StorageService } from '../services/storage';
 import { FootballDataService } from '../services/footballdata';
+import { SyncService } from '../services/sync-service';
 import { Key, CheckCircle, XCircle, Trash2, Heart, Download, Upload, Save, AlertTriangle, RefreshCcw, Database, BrainCircuit, Shield, Clock, Table, Calendar, User, Check, X, Wallet, Loader2, Newspaper, Users } from 'lucide-react';
 
 export const Settings: React.FC = () => {
@@ -10,14 +11,14 @@ export const Settings: React.FC = () => {
   const [inputs, setInputs] = useState({ oddsKey: '', geminiKey: '', footballKey: '', newsKey: '' });
   const [favTeam, setFavTeam] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   const [restoreStatus, setRestoreStatus] = useState<'idle' | 'restoring' | 'success' | 'error'>('idle');
-  
+
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyStatus, setHistoryStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [lastBackupDate, setLastBackupDate] = useState<string | null>(null);
   const [syncProgress, setSyncProgress] = useState<string>('');
-  
+
   // Bankroll State
   const [bankroll, setBankroll] = useState<number>(1000);
   const [kellyStrategy, setKellyStrategy] = useState<'aggressive' | 'moderate' | 'conservative'>('conservative');
@@ -46,7 +47,7 @@ export const Settings: React.FC = () => {
     const stored = StorageService.getKeys();
     const team = StorageService.getFavoriteTeam();
     const brSettings = StorageService.getBankrollSettings();
-    
+
     setKeys({
       oddsKey: stored.oddsKey || '',
       geminiKey: stored.geminiKey || '',
@@ -62,14 +63,14 @@ export const Settings: React.FC = () => {
     setFavTeam(team);
     setBankroll(brSettings.amount);
     setKellyStrategy(brSettings.strategy);
-    
+
     const backupDate = StorageService.getLastBackupDate();
     if (backupDate) {
-        try {
-          setLastBackupDate(new Date(backupDate).toLocaleString('it-IT'));
-        } catch (e) {
-          setLastBackupDate("-");
-        }
+      try {
+        setLastBackupDate(new Date(backupDate).toLocaleString('it-IT'));
+      } catch (e) {
+        setLastBackupDate("-");
+      }
     }
 
     refreshDataStats();
@@ -95,10 +96,10 @@ export const Settings: React.FC = () => {
     setFavTeam(val);
     StorageService.saveFavoriteTeam(val);
   };
-  
+
   const handleSaveBankroll = () => {
-      StorageService.saveBankrollSettings(bankroll, kellyStrategy);
-      alert("Impostazioni Bankroll salvate!");
+    StorageService.saveBankrollSettings(bankroll, kellyStrategy);
+    alert("Impostazioni Bankroll salvate!");
   };
 
   // SYNC WITH FOOTBALL-DATA.ORG - SAFE MODE (SEQUENTIAL)
@@ -111,95 +112,12 @@ export const Settings: React.FC = () => {
     setHistoryLoading(true);
     setHistoryStatus('idle');
     setSyncProgress('Avvio safe mode...');
-    
+
     try {
-      // Helper to prevent 429 errors
-      const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+      await SyncService.syncAll(keys.footballKey, (msg) => setSyncProgress(msg));
 
-      // 1. SYNC SERIE A
-      setSyncProgress('SA: Classifica...');
-      const standingsSA = await FootballDataService.fetchStandings(keys.footballKey, 'SA');
-      await wait(1500);
-
-      setSyncProgress('SA: Partite...');
-      const matchesSA = await FootballDataService.fetchSeasonMatches(keys.footballKey, 'SA');
-      await wait(1500);
-
-      setSyncProgress('SA: Marcatori...');
-      const scorersSA = await FootballDataService.fetchTopScorers(keys.footballKey, 'SA');
-      await wait(1500);
-
-      setSyncProgress('SA: Rose...');
-      const squadsSA = await FootballDataService.fetchTeams(keys.footballKey, 'SA');
-      await wait(2000);
-
-      // TAG SA DATA
-      const standingsSA_Tagged = standingsSA.map(s => ({...s, league: 'SA' as const}));
-      const scorersSA_Tagged = scorersSA.map(s => ({...s, league: 'SA' as const}));
-
-      // 2. SYNC PREMIER LEAGUE (PL)
-      setSyncProgress('PL: Classifica...');
-      let standingsPL: any[] = [], matchesPL: any[] = [], scorersPL: any[] = [], squadsPL: any[] = [];
-      
-      try {
-        standingsPL = await FootballDataService.fetchStandings(keys.footballKey, 'PL');
-        await wait(1500);
-        
-        setSyncProgress('PL: Partite...');
-        matchesPL = await FootballDataService.fetchSeasonMatches(keys.footballKey, 'PL');
-        await wait(1500);
-        
-        setSyncProgress('PL: Marcatori...');
-        scorersPL = await FootballDataService.fetchTopScorers(keys.footballKey, 'PL');
-        await wait(1500);
-        
-        setSyncProgress('PL: Rose...');
-        squadsPL = await FootballDataService.fetchTeams(keys.footballKey, 'PL');
-        await wait(2000);
-      } catch (e) {
-        console.warn("Premier League sync partial fail", e);
-      }
-      
-      const standingsPL_Tagged = standingsPL.map(s => ({...s, league: 'PL' as const}));
-      const scorersPL_Tagged = scorersPL.map(s => ({...s, league: 'PL' as const}));
-
-      // 3. SYNC CHAMPIONS LEAGUE
-      setSyncProgress('CL: Classifica...');
-      let standingsCL: any[] = [], matchesCL: any[] = [], scorersCL: any[] = [], squadsCL: any[] = [];
-      
-      try {
-        standingsCL = await FootballDataService.fetchStandings(keys.footballKey, 'CL');
-        await wait(1500);
-        
-        setSyncProgress('CL: Partite...');
-        matchesCL = await FootballDataService.fetchSeasonMatches(keys.footballKey, 'CL');
-        await wait(1500);
-        
-        setSyncProgress('CL: Marcatori...');
-        scorersCL = await FootballDataService.fetchTopScorers(keys.footballKey, 'CL');
-        await wait(1500);
-        
-        setSyncProgress('CL: Rose...');
-        squadsCL = await FootballDataService.fetchTeams(keys.footballKey, 'CL');
-      } catch (e) {
-          console.warn("Champions League sync partial fail", e);
-      }
-
-      // TAG CL DATA
-      const standingsCL_Tagged = standingsCL.map(s => ({...s, league: 'CL' as const}));
-      const scorersCL_Tagged = scorersCL.map(s => ({...s, league: 'CL' as const}));
-
-      // 4. MERGE DATA
-      const mergedStandings = [...standingsSA_Tagged, ...standingsPL_Tagged, ...standingsCL_Tagged];
-      const mergedMatches = [...matchesSA, ...matchesPL, ...matchesCL]; 
-      const mergedScorers = [...scorersSA_Tagged, ...scorersPL_Tagged, ...scorersCL_Tagged];
-      const mergedSquads = [...squadsSA, ...squadsPL, ...squadsCL];
-
-      StorageService.saveFootballData(mergedStandings, mergedMatches, mergedScorers, mergedSquads);
-      
-      setSyncProgress('Completato!');
       setHistoryStatus('success');
-      refreshDataStats(); 
+      refreshDataStats();
     } catch (e) {
       console.error(e);
       setSyncProgress('Errore 429/API');
@@ -212,7 +130,7 @@ export const Settings: React.FC = () => {
 
   const handleDownloadBackup = () => {
     const backupJSON = StorageService.createBackup();
-    
+
     // Update UI immediately
     const backupDate = StorageService.getLastBackupDate();
     if (backupDate) setLastBackupDate(new Date(backupDate).toLocaleString('it-IT'));
@@ -239,33 +157,33 @@ export const Settings: React.FC = () => {
       const content = e.target?.result as string;
       if (content) {
         try {
-            // Introduce a small delay to render the 'Restoring' state first
-            setTimeout(() => {
-                const success = StorageService.restoreBackup(content);
-                if (success) {
-                    setRestoreStatus('success');
-                    // FIX: Use root navigation instead of location.reload() to prevent 404/Moved errors on some hosts
-                    setTimeout(() => {
-                        window.location.href = '/';
-                    }, 1500);
-                } else {
-                    setRestoreStatus('error');
-                    if (fileInputRef.current) fileInputRef.current.value = '';
-                }
-            }, 500);
-        } catch(err) {
-            console.error("Parse error", err);
-            setRestoreStatus('error');
-            if (fileInputRef.current) fileInputRef.current.value = '';
+          // Introduce a small delay to render the 'Restoring' state first
+          setTimeout(() => {
+            const success = StorageService.restoreBackup(content);
+            if (success) {
+              setRestoreStatus('success');
+              // FIX: Use root navigation instead of location.reload() to prevent 404/Moved errors on some hosts
+              setTimeout(() => {
+                window.location.href = '/';
+              }, 1500);
+            } else {
+              setRestoreStatus('error');
+              if (fileInputRef.current) fileInputRef.current.value = '';
+            }
+          }, 500);
+        } catch (err) {
+          console.error("Parse error", err);
+          setRestoreStatus('error');
+          if (fileInputRef.current) fileInputRef.current.value = '';
         }
       }
     };
-    
+
     reader.onerror = () => {
-        setRestoreStatus('error');
-        if (fileInputRef.current) fileInputRef.current.value = '';
+      setRestoreStatus('error');
+      if (fileInputRef.current) fileInputRef.current.value = '';
     };
-    
+
     reader.readAsText(file);
   };
 
@@ -279,21 +197,21 @@ export const Settings: React.FC = () => {
 
   return (
     <div className="space-y-8 animate-fade-in pb-20 relative">
-      
+
       {/* Full Screen Loading Overlay for Restore */}
       {restoreStatus === 'restoring' && (
         <div className="fixed inset-0 z-[300] bg-black/90 flex flex-col items-center justify-center animate-fade-in">
-            <Loader2 size={64} className="text-redzone-600 animate-spin mb-4" />
-            <h2 className="text-2xl font-black text-white">RIPRISTINO IN CORSO...</h2>
-            <p className="text-neutral-400 mt-2">Non chiudere l'applicazione.</p>
+          <Loader2 size={64} className="text-redzone-600 animate-spin mb-4" />
+          <h2 className="text-2xl font-black text-white">RIPRISTINO IN CORSO...</h2>
+          <p className="text-neutral-400 mt-2">Non chiudere l'applicazione.</p>
         </div>
       )}
 
       {restoreStatus === 'success' && (
         <div className="fixed inset-0 z-[300] bg-green-900/90 flex flex-col items-center justify-center animate-fade-in">
-            <CheckCircle size={64} className="text-white mb-4" />
-            <h2 className="text-2xl font-black text-white">BACKUP RIPRISTINATO!</h2>
-            <p className="text-white mt-2">Riavvio automatico in corso...</p>
+          <CheckCircle size={64} className="text-white mb-4" />
+          <h2 className="text-2xl font-black text-white">BACKUP RIPRISTINATO!</h2>
+          <p className="text-white mt-2">Riavvio automatico in corso...</p>
         </div>
       )}
 
@@ -314,7 +232,7 @@ export const Settings: React.FC = () => {
             <input
               type="text"
               value={inputs.oddsKey}
-              onChange={(e) => setInputs({...inputs, oddsKey: e.target.value})}
+              onChange={(e) => setInputs({ ...inputs, oddsKey: e.target.value })}
               className="flex-1 bg-neutral-900 border border-neutral-700 rounded px-3 py-2 text-white focus:border-redzone-600 focus:outline-none text-sm"
               placeholder="Odds API Key..."
             />
@@ -337,7 +255,7 @@ export const Settings: React.FC = () => {
             <input
               type="text"
               value={inputs.geminiKey}
-              onChange={(e) => setInputs({...inputs, geminiKey: e.target.value})}
+              onChange={(e) => setInputs({ ...inputs, geminiKey: e.target.value })}
               className="flex-1 bg-neutral-900 border border-neutral-700 rounded px-3 py-2 text-white focus:border-blue-500 focus:outline-none text-sm"
               placeholder="Gemini API Key..."
             />
@@ -360,7 +278,7 @@ export const Settings: React.FC = () => {
             <input
               type="text"
               value={inputs.newsKey}
-              onChange={(e) => setInputs({...inputs, newsKey: e.target.value})}
+              onChange={(e) => setInputs({ ...inputs, newsKey: e.target.value })}
               className="flex-1 bg-neutral-900 border border-neutral-700 rounded px-3 py-2 text-white focus:border-orange-500 focus:outline-none text-sm"
               placeholder="News API Key..."
             />
@@ -384,7 +302,7 @@ export const Settings: React.FC = () => {
             <input
               type="text"
               value={inputs.footballKey}
-              onChange={(e) => setInputs({...inputs, footballKey: e.target.value})}
+              onChange={(e) => setInputs({ ...inputs, footballKey: e.target.value })}
               className="flex-1 bg-neutral-900 border border-neutral-700 rounded px-3 py-2 text-white focus:border-yellow-500 focus:outline-none text-sm"
               placeholder="Football Data Key..."
             />
@@ -394,89 +312,89 @@ export const Settings: React.FC = () => {
             )}
           </div>
           <p className="text-[10px] text-neutral-500">
-            Serve per scaricare classifica, forma e precedenti stagionali. 
+            Serve per scaricare classifica, forma e precedenti stagionali.
             <a href="https://www.football-data.org/" target="_blank" className="text-yellow-500 underline ml-1">Ottieni Key</a>
           </p>
         </div>
 
         {/* BANKROLL & STRATEGY SECTION */}
         <div className="space-y-3 border-t border-neutral-800 pt-6">
-           <label className="text-sm font-bold text-white flex items-center gap-2">
-              <Wallet size={16} className="text-green-500" /> Bankroll Management
-           </label>
-           <div className="flex gap-2">
-             <div className="flex-1">
-                <label className="text-[10px] uppercase text-neutral-500">Totale (€)</label>
-                <input
-                  type="number"
-                  value={bankroll}
-                  onChange={(e) => setBankroll(Number(e.target.value))}
-                  className="w-full bg-neutral-900 border border-neutral-700 rounded px-3 py-2 text-white text-sm"
-                />
-             </div>
-             <div className="flex-1">
-                <label className="text-[10px] uppercase text-neutral-500">Strategia Kelly</label>
-                <select 
-                  value={kellyStrategy}
-                  onChange={(e) => setKellyStrategy(e.target.value as any)}
-                  className="w-full bg-neutral-900 border border-neutral-700 rounded px-3 py-2 text-white text-sm"
-                >
-                    <option value="conservative">Conservativa (1/4)</option>
-                    <option value="moderate">Moderata (1/2)</option>
-                    <option value="aggressive">Aggressiva (Full)</option>
-                </select>
-             </div>
-           </div>
-           <Button onClick={handleSaveBankroll} variant="secondary" className="w-full text-xs">
-             SALVA BANKROLL
-           </Button>
+          <label className="text-sm font-bold text-white flex items-center gap-2">
+            <Wallet size={16} className="text-green-500" /> Bankroll Management
+          </label>
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <label className="text-[10px] uppercase text-neutral-500">Totale (€)</label>
+              <input
+                type="number"
+                value={bankroll}
+                onChange={(e) => setBankroll(Number(e.target.value))}
+                className="w-full bg-neutral-900 border border-neutral-700 rounded px-3 py-2 text-white text-sm"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="text-[10px] uppercase text-neutral-500">Strategia Kelly</label>
+              <select
+                value={kellyStrategy}
+                onChange={(e) => setKellyStrategy(e.target.value as any)}
+                className="w-full bg-neutral-900 border border-neutral-700 rounded px-3 py-2 text-white text-sm"
+              >
+                <option value="conservative">Conservativa (1/4)</option>
+                <option value="moderate">Moderata (1/2)</option>
+                <option value="aggressive">Aggressiva (Full)</option>
+              </select>
+            </div>
+          </div>
+          <Button onClick={handleSaveBankroll} variant="secondary" className="w-full text-xs">
+            SALVA BANKROLL
+          </Button>
         </div>
 
         {/* ANTI-FAN FILTER SECTION */}
         <div className="space-y-3 border-t border-neutral-800 pt-6">
-           <label className="text-sm font-bold text-white flex items-center gap-2">
-              <Heart size={16} className="text-pink-500" /> Filtro Anti-Tifo (Cynical Mode)
-            </label>
-            <input
-              type="text"
-              value={favTeam}
-              onChange={handleSaveTeam}
-              className="w-full bg-neutral-900 border border-neutral-700 rounded px-3 py-2 text-white focus:border-pink-500 focus:outline-none text-sm"
-              placeholder="Inserisci la tua squadra..."
-            />
+          <label className="text-sm font-bold text-white flex items-center gap-2">
+            <Heart size={16} className="text-pink-500" /> Filtro Anti-Tifo (Cynical Mode)
+          </label>
+          <input
+            type="text"
+            value={favTeam}
+            onChange={handleSaveTeam}
+            className="w-full bg-neutral-900 border border-neutral-700 rounded px-3 py-2 text-white focus:border-pink-500 focus:outline-none text-sm"
+            placeholder="Inserisci la tua squadra..."
+          />
         </div>
       </div>
 
       {/* FOOTBALL DATA SYNC SECTION */}
       <div className="bg-neutral-900/50 border border-neutral-800 p-6 rounded-xl">
-         <div className="flex justify-between items-start mb-4">
-            <div>
-                <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                    <Database size={18} className="text-neutral-400" /> Dati Context (Storico)
-                </h2>
-                <p className="text-neutral-400 text-xs mt-1">
-                    Cache Locale per SA, PL e CL.
-                </p>
+        <div className="flex justify-between items-start mb-4">
+          <div>
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <Database size={18} className="text-neutral-400" /> Dati Context (Storico)
+            </h2>
+            <p className="text-neutral-400 text-xs mt-1">
+              Cache Locale per SA, PL e CL.
+            </p>
+          </div>
+          {dataStats.lastSync > 0 && (
+            <div className="text-[10px] text-neutral-500 text-right">
+              Sync: {new Date(dataStats.lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} <br />
+              {new Date(dataStats.lastSync).toLocaleDateString()}
             </div>
-            {dataStats.lastSync > 0 && (
-                <div className="text-[10px] text-neutral-500 text-right">
-                    Sync: {new Date(dataStats.lastSync).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} <br/>
-                    {new Date(dataStats.lastSync).toLocaleDateString()}
-                </div>
-            )}
-         </div>
-        
+          )}
+        </div>
+
         {/* DATA STATUS GRID */}
         <div className="grid grid-cols-4 gap-2 mb-4">
-            <DataStatusBadge label="Classifica" count={dataStats.standings} icon={Table} />
-            <DataStatusBadge label="Partite" count={dataStats.matches} icon={Calendar} />
-            <DataStatusBadge label="Marcatori" count={dataStats.scorers} icon={User} />
-            <DataStatusBadge label="Rose" count={dataStats.squads} icon={Users} />
+          <DataStatusBadge label="Classifica" count={dataStats.standings} icon={Table} />
+          <DataStatusBadge label="Partite" count={dataStats.matches} icon={Calendar} />
+          <DataStatusBadge label="Marcatori" count={dataStats.scorers} icon={User} />
+          <DataStatusBadge label="Rose" count={dataStats.squads} icon={Users} />
         </div>
 
         <div className="flex items-center gap-3">
-          <Button 
-            onClick={handleSyncFootballData} 
+          <Button
+            onClick={handleSyncFootballData}
             isLoading={historyLoading}
             variant="secondary"
             className="text-xs flex-1"
@@ -484,7 +402,7 @@ export const Settings: React.FC = () => {
           >
             <RefreshCcw size={14} /> {historyLoading ? (syncProgress || 'AGGIORNAMENTO...') : 'SINCRONIZZA (SA+PL+CL)'}
           </Button>
-          
+
           {historyStatus === 'success' && <div className="text-green-500 text-xs flex items-center gap-1 font-bold"><CheckCircle size={16} /> Ok!</div>}
           {historyStatus === 'error' && <div className="text-red-500 text-xs flex items-center gap-1 font-bold"><AlertTriangle size={16} /> Err</div>}
         </div>
@@ -498,32 +416,32 @@ export const Settings: React.FC = () => {
         <p className="text-neutral-400 text-xs mb-4">
           Salva TUTTO (Chiavi, Scommesse, Analisi, Classifiche) in un file.
         </p>
-        
+
         {lastBackupDate && (
-             <div className="mb-4 p-2 bg-neutral-800/50 rounded border border-neutral-700 flex items-center gap-2 text-xs text-neutral-400">
-               <Clock size={14} /> Ultimo Backup: <span className="text-white font-bold">{lastBackupDate}</span>
-             </div>
+          <div className="mb-4 p-2 bg-neutral-800/50 rounded border border-neutral-700 flex items-center gap-2 text-xs text-neutral-400">
+            <Clock size={14} /> Ultimo Backup: <span className="text-white font-bold">{lastBackupDate}</span>
+          </div>
         )}
 
         <div className="grid grid-cols-2 gap-4">
           <Button onClick={handleDownloadBackup} className="w-full text-xs bg-neutral-800 border border-neutral-700">
             <Download size={14} /> SCARICA
           </Button>
-          
-          <Button 
-            onClick={() => fileInputRef.current?.click()} 
+
+          <Button
+            onClick={() => fileInputRef.current?.click()}
             className="w-full text-xs bg-neutral-800 border border-neutral-700"
             disabled={restoreStatus === 'restoring'}
           >
             <Upload size={14} /> RIPRISTINA
           </Button>
-          <input type="file" ref={fileInputRef} className="hidden" accept=".json" onChange={handleUploadBackup}/>
+          <input type="file" ref={fileInputRef} className="hidden" accept=".json" onChange={handleUploadBackup} />
         </div>
-        
+
         {restoreStatus === 'error' && (
-            <div className="mt-2 bg-red-900/20 border border-red-900/50 p-2 rounded text-red-500 text-xs text-center font-bold flex items-center justify-center gap-2">
-                <AlertTriangle size={14} /> Errore nel file di backup!
-            </div>
+          <div className="mt-2 bg-red-900/20 border border-red-900/50 p-2 rounded text-red-500 text-xs text-center font-bold flex items-center justify-center gap-2">
+            <AlertTriangle size={14} /> Errore nel file di backup!
+          </div>
         )}
       </div>
     </div>
