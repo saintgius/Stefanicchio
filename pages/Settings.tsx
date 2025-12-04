@@ -373,7 +373,7 @@ export const Settings: React.FC = () => {
               <Database size={18} className="text-neutral-400" /> Dati Context (Storico)
             </h2>
             <p className="text-neutral-400 text-xs mt-1">
-              Cache Locale per SA, PL e CL.
+              Cache Locale per SA, PL, CL e La Liga.
             </p>
           </div>
           {dataStats.lastSync > 0 && (
@@ -400,7 +400,7 @@ export const Settings: React.FC = () => {
             className="text-xs flex-1"
             disabled={!keys.footballKey}
           >
-            <RefreshCcw size={14} /> {historyLoading ? (syncProgress || 'AGGIORNAMENTO...') : 'SINCRONIZZA (SA+PL+CL)'}
+            <RefreshCcw size={14} /> {historyLoading ? (syncProgress || 'AGGIORNAMENTO...') : 'SINCRONIZZA TUTTO'}
           </Button>
 
           {historyStatus === 'success' && <div className="text-green-500 text-xs flex items-center gap-1 font-bold"><CheckCircle size={16} /> Ok!</div>}
