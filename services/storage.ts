@@ -18,16 +18,16 @@ const KEYS = {
   BANKROLL: 'rz_bankroll',
   OPENING_ODDS: 'rz_opening_odds',
   CACHED_NEWS: 'rz_cached_news',
-  UPCOMING_MATCHES: 'rz_upcoming_matches' 
+  UPCOMING_MATCHES: 'rz_upcoming_matches'
 };
 
 // Advanced Normalization
 const normalizeTeamName = (name: string): string => {
   if (!name) return '';
   let n = name.toLowerCase();
-  
+
   // Mappature specifiche note
-  const mappings: {[key: string]: string} = {
+  const mappings: { [key: string]: string } = {
     // SERIE A
     'inter': 'inter',
     'internazionale': 'inter',
@@ -150,15 +150,61 @@ const normalizeTeamName = (name: string): string => {
     'sparta prague': 'acspartapraha',
     'sturm graz': 'sksturmgraz',
     'dinamo zagreb': 'gnkdinamozagreb',
-    'slovan bratislava': 'skslovanbratislava'
+    'slovan bratislava': 'skslovanbratislava',
+
+    // LA LIGA (SPAIN)
+    'real madrid': 'realmadrid',
+    'real madrid cf': 'realmadrid',
+    'barcelona': 'barcelona',
+    'fc barcelona': 'barcelona',
+    'atlético madrid': 'atleticomadrid',
+    'atletico madrid': 'atleticomadrid',
+    'atlético de madrid': 'atleticomadrid',
+    'sevilla': 'sevillafc',
+    'sevilla fc': 'sevillafc',
+    'villarreal': 'villarrealcf',
+    'villarreal cf': 'villarrealcf',
+    'real sociedad': 'realsociedad',
+    'real betis': 'realbetis',
+    'betis': 'realbetis',
+    'athletic bilbao': 'athleticclub',
+    'athletic club': 'athleticclub',
+    'athletic': 'athleticclub',
+    'valencia': 'valenciacf',
+    'valencia cf': 'valenciacf',
+    'girona': 'gironafc',
+    'girona fc': 'gironafc',
+    'celta vigo': 'rceltadevigo',
+    'celta': 'rceltadevigo',
+    'osasuna': 'caosasuna',
+    'ca osasuna': 'caosasuna',
+    'getafe': 'getafecf',
+    'getafe cf': 'getafecf',
+    'espanyol': 'rcdeespanyol',
+    'rcd espanyol': 'rcdeespanyol',
+    'las palmas': 'udlaspalmas',
+    'ud las palmas': 'udlaspalmas',
+    'mallorca': 'rcdmallorca',
+    'rcd mallorca': 'rcdmallorca',
+    'real mallorca': 'rcdmallorca',
+    'rayo vallecano': 'rayovallecano',
+    'rayo': 'rayovallecano',
+    'alavés': 'deportivoalaves',
+    'alaves': 'deportivoalaves',
+    'deportivo alavés': 'deportivoalaves',
+    'leganes': 'cdleganes',
+    'cd leganes': 'cdleganes',
+    'leganés': 'cdleganes',
+    'valladolid': 'realvalladolid',
+    'real valladolid': 'realvalladolid'
   };
 
   if (mappings[n]) return mappings[n];
-  
+
   n = n.replace(/fc|ac|as|ssc|calcio|football club|sportiva|u\.s\.|c\.f\.|1907|1913|04|b\.c\.|s\.s\.|g\.n\.k\.|k\.v\.|c\.d\.|s\.l\.|o\.s\.c\.|c\.p\./g, '')
-       .replace(/\s+/g, '')
-       .replace(/[^a-z]/g, '')
-       .trim();
+    .replace(/\s+/g, '')
+    .replace(/[^a-z]/g, '')
+    .trim();
 
   return n;
 };
@@ -187,7 +233,7 @@ export const StorageService = {
   getFavoriteTeam: () => {
     return localStorage.getItem(KEYS.FAV_TEAM) || '';
   },
-  
+
   getLastBackupDate: () => {
     return localStorage.getItem(KEYS.LAST_BACKUP_DATE);
   },
@@ -202,12 +248,12 @@ export const StorageService = {
   },
 
   saveNews: (news: NewsArticle[]) => {
-      localStorage.setItem(KEYS.CACHED_NEWS, JSON.stringify(news));
+    localStorage.setItem(KEYS.CACHED_NEWS, JSON.stringify(news));
   },
 
   getNews: (): NewsArticle[] => {
-      const data = localStorage.getItem(KEYS.CACHED_NEWS);
-      return data ? JSON.parse(data) : [];
+    const data = localStorage.getItem(KEYS.CACHED_NEWS);
+    return data ? JSON.parse(data) : [];
   },
 
   trackOpeningOdds: (matches: { id: string, odds: { home: number, draw: number, away: number } }[]) => {
@@ -235,26 +281,26 @@ export const StorageService = {
   },
 
   saveUpcomingMatches: (matches: ProcessedMatch[]) => {
-      const stored = localStorage.getItem(KEYS.UPCOMING_MATCHES);
-      let currentPool: ProcessedMatch[] = stored ? JSON.parse(stored) : [];
-      
-      const now = new Date();
-      currentPool = currentPool.filter(m => new Date(m.startTime) > now);
+    const stored = localStorage.getItem(KEYS.UPCOMING_MATCHES);
+    let currentPool: ProcessedMatch[] = stored ? JSON.parse(stored) : [];
 
-      const newIds = new Set(matches.map(m => m.id));
-      const merged = [
-          ...currentPool.filter(m => !newIds.has(m.id)),
-          ...matches
-      ];
+    const now = new Date();
+    currentPool = currentPool.filter(m => new Date(m.startTime) > now);
 
-      merged.sort((a,b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+    const newIds = new Set(matches.map(m => m.id));
+    const merged = [
+      ...currentPool.filter(m => !newIds.has(m.id)),
+      ...matches
+    ];
 
-      localStorage.setItem(KEYS.UPCOMING_MATCHES, JSON.stringify(merged));
+    merged.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+
+    localStorage.setItem(KEYS.UPCOMING_MATCHES, JSON.stringify(merged));
   },
 
   getUpcomingMatches: (): ProcessedMatch[] => {
-      const data = localStorage.getItem(KEYS.UPCOMING_MATCHES);
-      return data ? JSON.parse(data) : [];
+    const data = localStorage.getItem(KEYS.UPCOMING_MATCHES);
+    return data ? JSON.parse(data) : [];
   },
 
   saveFootballData: (standings: LeagueStanding[], matches: FootballDataMatch[], scorers: TopScorer[], squads?: TeamSquad[]) => {
@@ -284,113 +330,113 @@ export const StorageService = {
     const data = localStorage.getItem(KEYS.STANDINGS);
     return data ? JSON.parse(data) : [];
   },
-  
+
   getSquads: (): TeamSquad[] => {
-      const data = localStorage.getItem(KEYS.SQUADS);
-      return data ? JSON.parse(data) : [];
+    const data = localStorage.getItem(KEYS.SQUADS);
+    return data ? JSON.parse(data) : [];
   },
 
   getDetailedLastMatches: (teamName: string, limit: number = 5): string => {
-      const matches: FootballDataMatch[] = localStorage.getItem(KEYS.SEASON_MATCHES) ? JSON.parse(localStorage.getItem(KEYS.SEASON_MATCHES) || '[]') : [];
-      if (matches.length === 0) return "Dati storico partite non presenti (Eseguire Sync).";
+    const matches: FootballDataMatch[] = localStorage.getItem(KEYS.SEASON_MATCHES) ? JSON.parse(localStorage.getItem(KEYS.SEASON_MATCHES) || '[]') : [];
+    if (matches.length === 0) return "Dati storico partite non presenti (Eseguire Sync).";
 
-      const normTeam = normalizeTeamName(teamName);
-      
-      const teamMatches = matches.filter(m => {
-          const h = normalizeTeamName(m.homeTeam.name);
-          const a = normalizeTeamName(m.awayTeam.name);
-          return h === normTeam || a === normTeam || h.includes(normTeam) || a.includes(normTeam);
-      });
+    const normTeam = normalizeTeamName(teamName);
 
-      teamMatches.sort((a, b) => new Date(b.utcDate).getTime() - new Date(a.utcDate).getTime());
+    const teamMatches = matches.filter(m => {
+      const h = normalizeTeamName(m.homeTeam.name);
+      const a = normalizeTeamName(m.awayTeam.name);
+      return h === normTeam || a === normTeam || h.includes(normTeam) || a.includes(normTeam);
+    });
 
-      if (teamMatches.length === 0) return "Nessuna partita recente trovata (Verificare Competizione).";
+    teamMatches.sort((a, b) => new Date(b.utcDate).getTime() - new Date(a.utcDate).getTime());
 
-      return teamMatches.slice(0, limit).map(m => {
-          const isHome = normalizeTeamName(m.homeTeam.name).includes(normTeam) || normalizeTeamName(m.homeTeam.name) === normTeam;
-          const opponent = isHome ? m.awayTeam.name : m.homeTeam.name;
-          const score = m.score.fullTime.home !== null ? `${m.score.fullTime.home}-${m.score.fullTime.away}` : 'N/D';
-          const date = m.utcDate.split('T')[0];
-          const outcome = isHome 
-             ? (m.score.fullTime.home > m.score.fullTime.away ? 'W' : m.score.fullTime.home === m.score.fullTime.away ? 'D' : 'L')
-             : (m.score.fullTime.away > m.score.fullTime.home ? 'W' : m.score.fullTime.away === m.score.fullTime.home ? 'D' : 'L');
-          
-          return `- [${date}] vs ${opponent} (${outcome}) Risultato: ${score}`;
-      }).join('\n');
+    if (teamMatches.length === 0) return "Nessuna partita recente trovata (Verificare Competizione).";
+
+    return teamMatches.slice(0, limit).map(m => {
+      const isHome = normalizeTeamName(m.homeTeam.name).includes(normTeam) || normalizeTeamName(m.homeTeam.name) === normTeam;
+      const opponent = isHome ? m.awayTeam.name : m.homeTeam.name;
+      const score = m.score.fullTime.home !== null ? `${m.score.fullTime.home}-${m.score.fullTime.away}` : 'N/D';
+      const date = m.utcDate.split('T')[0];
+      const outcome = isHome
+        ? (m.score.fullTime.home > m.score.fullTime.away ? 'W' : m.score.fullTime.home === m.score.fullTime.away ? 'D' : 'L')
+        : (m.score.fullTime.away > m.score.fullTime.home ? 'W' : m.score.fullTime.away === m.score.fullTime.home ? 'D' : 'L');
+
+      return `- [${date}] vs ${opponent} (${outcome}) Risultato: ${score}`;
+    }).join('\n');
   },
 
-  getAdvancedForm: (teamName: string, limit: number = 5): {result: 'W'|'D'|'L', score: string, color: string, tooltip: string}[] => {
-      const matches: FootballDataMatch[] = localStorage.getItem(KEYS.SEASON_MATCHES) ? JSON.parse(localStorage.getItem(KEYS.SEASON_MATCHES) || '[]') : [];
-      if (matches.length === 0) return [];
+  getAdvancedForm: (teamName: string, limit: number = 5): { result: 'W' | 'D' | 'L', score: string, color: string, tooltip: string }[] => {
+    const matches: FootballDataMatch[] = localStorage.getItem(KEYS.SEASON_MATCHES) ? JSON.parse(localStorage.getItem(KEYS.SEASON_MATCHES) || '[]') : [];
+    if (matches.length === 0) return [];
 
-      const normTeam = normalizeTeamName(teamName);
-      
-      const teamMatches = matches.filter(m => {
-          const h = normalizeTeamName(m.homeTeam.name);
-          const a = normalizeTeamName(m.awayTeam.name);
-          return h === normTeam || a === normTeam || h.includes(normTeam) || a.includes(normTeam);
-      });
+    const normTeam = normalizeTeamName(teamName);
 
-      teamMatches.sort((a, b) => new Date(b.utcDate).getTime() - new Date(a.utcDate).getTime());
+    const teamMatches = matches.filter(m => {
+      const h = normalizeTeamName(m.homeTeam.name);
+      const a = normalizeTeamName(m.awayTeam.name);
+      return h === normTeam || a === normTeam || h.includes(normTeam) || a.includes(normTeam);
+    });
 
-      return teamMatches.slice(0, limit).map(m => {
-          const isHome = normalizeTeamName(m.homeTeam.name).includes(normTeam) || normalizeTeamName(m.homeTeam.name) === normTeam;
-          const scoreHome = m.score.fullTime.home;
-          const scoreAway = m.score.fullTime.away;
-          const score = `${scoreHome}-${scoreAway}`;
-          
-          let result: 'W'|'D'|'L' = 'D';
-          let color = 'bg-neutral-600'; 
-          let tooltip = `Pareggio (${score})`;
+    teamMatches.sort((a, b) => new Date(b.utcDate).getTime() - new Date(a.utcDate).getTime());
 
-          if (isHome) {
-              if (scoreHome > scoreAway) {
-                  result = 'W';
-                  if (scoreHome - scoreAway > 1) {
-                      color = 'bg-green-600 border border-green-400 shadow-[0_0_5px_#22c55e]';
-                      tooltip = `Vittoria Netta (${score})`;
-                  } else {
-                      color = 'bg-yellow-500 text-black border border-yellow-300';
-                      tooltip = `Vittoria Risicata (${score})`;
-                  }
-              } else if (scoreHome < scoreAway) {
-                  result = 'L';
-                  color = 'bg-red-600 border border-red-400';
-                  tooltip = `Sconfitta (${score})`;
-              } else {
-                  if (scoreHome > 1) {
-                      color = 'bg-orange-500 text-black border border-orange-300';
-                      tooltip = `Pareggio Spettacolo (${score})`;
-                  } else {
-                      color = 'bg-neutral-600 border border-neutral-500';
-                  }
-              }
+    return teamMatches.slice(0, limit).map(m => {
+      const isHome = normalizeTeamName(m.homeTeam.name).includes(normTeam) || normalizeTeamName(m.homeTeam.name) === normTeam;
+      const scoreHome = m.score.fullTime.home;
+      const scoreAway = m.score.fullTime.away;
+      const score = `${scoreHome}-${scoreAway}`;
+
+      let result: 'W' | 'D' | 'L' = 'D';
+      let color = 'bg-neutral-600';
+      let tooltip = `Pareggio (${score})`;
+
+      if (isHome) {
+        if (scoreHome > scoreAway) {
+          result = 'W';
+          if (scoreHome - scoreAway > 1) {
+            color = 'bg-green-600 border border-green-400 shadow-[0_0_5px_#22c55e]';
+            tooltip = `Vittoria Netta (${score})`;
           } else {
-              if (scoreAway > scoreHome) {
-                  result = 'W';
-                  if (scoreAway - scoreHome > 1) {
-                      color = 'bg-green-600 border border-green-400 shadow-[0_0_5px_#22c55e]'; 
-                      tooltip = `Vittoria Netta (${score})`;
-                  } else {
-                      color = 'bg-yellow-500 text-black border border-yellow-300';
-                      tooltip = `Vittoria Risicata (${score})`;
-                  }
-              } else if (scoreAway < scoreHome) {
-                  result = 'L';
-                  color = 'bg-red-600 border border-red-400';
-                  tooltip = `Sconfitta (${score})`;
-              } else {
-                   if (scoreAway > 1) {
-                      color = 'bg-orange-500 text-black border border-orange-300';
-                      tooltip = `Pareggio Spettacolo (${score})`;
-                  } else {
-                      color = 'bg-neutral-600 border border-neutral-500';
-                  }
-              }
+            color = 'bg-yellow-500 text-black border border-yellow-300';
+            tooltip = `Vittoria Risicata (${score})`;
           }
-          
-          return { result, score, color, tooltip };
-      }).reverse();
+        } else if (scoreHome < scoreAway) {
+          result = 'L';
+          color = 'bg-red-600 border border-red-400';
+          tooltip = `Sconfitta (${score})`;
+        } else {
+          if (scoreHome > 1) {
+            color = 'bg-orange-500 text-black border border-orange-300';
+            tooltip = `Pareggio Spettacolo (${score})`;
+          } else {
+            color = 'bg-neutral-600 border border-neutral-500';
+          }
+        }
+      } else {
+        if (scoreAway > scoreHome) {
+          result = 'W';
+          if (scoreAway - scoreHome > 1) {
+            color = 'bg-green-600 border border-green-400 shadow-[0_0_5px_#22c55e]';
+            tooltip = `Vittoria Netta (${score})`;
+          } else {
+            color = 'bg-yellow-500 text-black border border-yellow-300';
+            tooltip = `Vittoria Risicata (${score})`;
+          }
+        } else if (scoreAway < scoreHome) {
+          result = 'L';
+          color = 'bg-red-600 border border-red-400';
+          tooltip = `Sconfitta (${score})`;
+        } else {
+          if (scoreAway > 1) {
+            color = 'bg-orange-500 text-black border border-orange-300';
+            tooltip = `Pareggio Spettacolo (${score})`;
+          } else {
+            color = 'bg-neutral-600 border border-neutral-500';
+          }
+        }
+      }
+
+      return { result, score, color, tooltip };
+    }).reverse();
   },
 
   getMatchContext: (homeTeamName: string, awayTeamName: string): string => {
@@ -406,19 +452,19 @@ export const StorageService = {
     let context = `DATA ODIERNA: ${new Date().toISOString().split('T')[0]}\n\n`;
 
     const getTeamOfficialScorers = (teamName: string) => {
-        const nT = normalizeTeamName(teamName);
-        return scorers.filter(s => {
-            const sTeam = normalizeTeamName(s.team.name);
-            return sTeam === nT || sTeam.includes(nT) || nT.includes(sTeam);
-        }).sort((a,b) => b.goals - a.goals);
+      const nT = normalizeTeamName(teamName);
+      return scorers.filter(s => {
+        const sTeam = normalizeTeamName(s.team.name);
+        return sTeam === nT || sTeam.includes(nT) || nT.includes(sTeam);
+      }).sort((a, b) => b.goals - a.goals);
     };
 
     const homeRealScorers = getTeamOfficialScorers(homeTeamName);
     const awayRealScorers = getTeamOfficialScorers(awayTeamName);
 
     const findTeam = (normName: string) => standings.find(s => {
-        const sNorm = normalizeTeamName(s.team.name);
-        return sNorm === normName || sNorm.includes(normName) || normName.includes(sNorm);
+      const sNorm = normalizeTeamName(s.team.name);
+      return sNorm === normName || sNorm.includes(normName) || normName.includes(sNorm);
     });
 
     const homeStat = findTeam(normHome);
@@ -429,12 +475,12 @@ export const StorageService = {
       context += `Classifica: ${homeStat.position}° posto, ${homeStat.points} punti.\n`;
       context += `Gol: ${homeStat.goalsFor} Fatti, ${homeStat.goalsAgainst} Subiti.\n`;
       context += `ULTIME 5 PARTITE:\n${StorageService.getDetailedLastMatches(homeTeamName)}\n`;
-      
+
       if (homeRealScorers.length > 0) {
-          context += `\n*** CANNONIERI UFFICIALI ${homeTeamName} (DA API) ***\n`;
-          homeRealScorers.slice(0, 5).forEach(s => {
-              context += `- ${s.player.name}: ${s.goals} GOL\n`;
-          });
+        context += `\n*** CANNONIERI UFFICIALI ${homeTeamName} (DA API) ***\n`;
+        homeRealScorers.slice(0, 5).forEach(s => {
+          context += `- ${s.player.name}: ${s.goals} GOL\n`;
+        });
       }
       context += `\n`;
     } else {
@@ -448,10 +494,10 @@ export const StorageService = {
       context += `ULTIME 5 PARTITE:\n${StorageService.getDetailedLastMatches(awayTeamName)}\n`;
 
       if (awayRealScorers.length > 0) {
-          context += `\n*** CANNONIERI UFFICIALI ${awayTeamName} (DA API) ***\n`;
-          awayRealScorers.slice(0, 5).forEach(s => {
-              context += `- ${s.player.name}: ${s.goals} GOL\n`;
-          });
+        context += `\n*** CANNONIERI UFFICIALI ${awayTeamName} (DA API) ***\n`;
+        awayRealScorers.slice(0, 5).forEach(s => {
+          context += `- ${s.player.name}: ${s.goals} GOL\n`;
+        });
       }
       context += `\n`;
     } else {
@@ -459,38 +505,38 @@ export const StorageService = {
     }
 
     const findSquad = (normName: string) => squads.find(t => {
-        const sNorm = normalizeTeamName(t.name);
-        return sNorm === normName || sNorm.includes(normName) || normName.includes(sNorm);
+      const sNorm = normalizeTeamName(t.name);
+      return sNorm === normName || sNorm.includes(normName) || normName.includes(sNorm);
     });
 
     const homeSquad = findSquad(normHome);
     const awaySquad = findSquad(normAway);
 
     if (homeSquad && homeSquad.squad) {
-        context += `ROSA COMPLETA ${homeTeamName} (Lista Giocatori):\n`;
-        const players = homeSquad.squad.map(p => {
-             const scorerData = homeRealScorers.find(s => normalizeTeamName(s.player.name) === normalizeTeamName(p.name));
-             const goalTag = scorerData ? ` [★ ${scorerData.goals} GOL]` : '';
-             return `${p.name} (${p.position})${goalTag}`;
-        }).join(', ');
-        context += `${players}\n\n`;
+      context += `ROSA COMPLETA ${homeTeamName} (Lista Giocatori):\n`;
+      const players = homeSquad.squad.map(p => {
+        const scorerData = homeRealScorers.find(s => normalizeTeamName(s.player.name) === normalizeTeamName(p.name));
+        const goalTag = scorerData ? ` [★ ${scorerData.goals} GOL]` : '';
+        return `${p.name} (${p.position})${goalTag}`;
+      }).join(', ');
+      context += `${players}\n\n`;
     }
 
     if (awaySquad && awaySquad.squad) {
-        context += `ROSA COMPLETA ${awayTeamName} (Lista Giocatori):\n`;
-        const players = awaySquad.squad.map(p => {
-             const scorerData = awayRealScorers.find(s => normalizeTeamName(s.player.name) === normalizeTeamName(p.name));
-             const goalTag = scorerData ? ` [★ ${scorerData.goals} GOL]` : '';
-             return `${p.name} (${p.position})${goalTag}`;
-        }).join(', ');
-        context += `${players}\n\n`;
+      context += `ROSA COMPLETA ${awayTeamName} (Lista Giocatori):\n`;
+      const players = awaySquad.squad.map(p => {
+        const scorerData = awayRealScorers.find(s => normalizeTeamName(s.player.name) === normalizeTeamName(p.name));
+        const goalTag = scorerData ? ` [★ ${scorerData.goals} GOL]` : '';
+        return `${p.name} (${p.position})${goalTag}`;
+      }).join(', ');
+      context += `${players}\n\n`;
     }
 
     const h2h = matches.filter(m => {
       const mHome = normalizeTeamName(m.homeTeam.name);
       const mAway = normalizeTeamName(m.awayTeam.name);
       return ((mHome.includes(normHome) || normHome.includes(mHome)) && (mAway.includes(normAway) || normAway.includes(mAway))) ||
-             ((mHome.includes(normAway) || normAway.includes(mHome)) && (mAway.includes(normHome) || normHome.includes(mAway)));
+        ((mHome.includes(normAway) || normAway.includes(mHome)) && (mAway.includes(normHome) || normHome.includes(mAway)));
     });
 
     if (h2h.length > 0) {
@@ -499,21 +545,21 @@ export const StorageService = {
         context += `${m.utcDate.split('T')[0]}: ${m.homeTeam.name} ${m.score.fullTime.home} - ${m.score.fullTime.away} ${m.awayTeam.name}\n`;
       });
     }
-    
+
     const medKeywords = ['infortunio', 'squalifica', 'out', 'indisponibile', 'non convocato', 'salta', 'stop', 'lesione', 'turnover', 'panchina', 'riserve'];
     const filterNews = (normTeam: string) => news.filter(n => {
-         const txt = (n.title + n.description).toLowerCase();
-         if (!txt.includes(normTeam)) return false;
-         return medKeywords.some(k => txt.includes(k));
+      const txt = (n.title + n.description).toLowerCase();
+      if (!txt.includes(normTeam)) return false;
+      return medKeywords.some(k => txt.includes(k));
     });
 
     const homeNews = filterNews(normHome);
     const awayNews = filterNews(normAway);
 
     if (homeNews.length > 0 || awayNews.length > 0) {
-        context += `\n=== NEWS NOTEVOLI (POSSIBILE TURNOVER/ASSENZE) ===\n`;
-        if(homeNews.length > 0) homeNews.slice(0,3).forEach(n => context += `- ${n.title}\n`);
-        if(awayNews.length > 0) awayNews.slice(0,3).forEach(n => context += `- ${n.title}\n`);
+      context += `\n=== NEWS NOTEVOLI (POSSIBILE TURNOVER/ASSENZE) ===\n`;
+      if (homeNews.length > 0) homeNews.slice(0, 3).forEach(n => context += `- ${n.title}\n`);
+      if (awayNews.length > 0) awayNews.slice(0, 3).forEach(n => context += `- ${n.title}\n`);
     }
 
     return context;
@@ -525,10 +571,10 @@ export const StorageService = {
     const normAway = normalizeTeamName(awayTeamName);
 
     return matches.filter(m => {
-       const mHome = normalizeTeamName(m.homeTeam.name);
-       const mAway = normalizeTeamName(m.awayTeam.name);
-       return ((mHome.includes(normHome) || normHome.includes(mHome)) && (mAway.includes(normAway) || normAway.includes(mAway))) ||
-              ((mHome.includes(normAway) || normAway.includes(mHome)) && (mAway.includes(normHome) || normHome.includes(mAway)));
+      const mHome = normalizeTeamName(m.homeTeam.name);
+      const mAway = normalizeTeamName(m.awayTeam.name);
+      return ((mHome.includes(normHome) || normHome.includes(mHome)) && (mAway.includes(normAway) || normAway.includes(mAway))) ||
+        ((mHome.includes(normAway) || normAway.includes(mHome)) && (mAway.includes(normHome) || normHome.includes(mAway)));
     }).sort((a, b) => new Date(b.utcDate).getTime() - new Date(a.utcDate).getTime());
   },
 
@@ -536,24 +582,24 @@ export const StorageService = {
     const standings = StorageService.getStandings();
     const normName = normalizeTeamName(teamName);
     const team = standings.find(s => {
-        const sName = normalizeTeamName(s.team.name);
-        return sName === normName || sName.includes(normName) || normName.includes(sName);
+      const sName = normalizeTeamName(s.team.name);
+      return sName === normName || sName.includes(normName) || normName.includes(sName);
     });
     return team ? team.position : null;
   },
-  
+
   getFormArray: (teamName: string): string[] => {
     const standings = StorageService.getStandings();
     const normName = normalizeTeamName(teamName);
     const team = standings.find(s => {
-        const sName = normalizeTeamName(s.team.name);
-        return sName === normName || sName.includes(normName) || normName.includes(sName);
+      const sName = normalizeTeamName(s.team.name);
+      return sName === normName || sName.includes(normName) || normName.includes(sName);
     });
-    
+
     if (team && team.form) {
-        return team.form.split(',').map(c => c.trim());
+      return team.form.split(',').map(c => c.trim());
     }
-    return ['-','-','-','-','-'];
+    return ['-', '-', '-', '-', '-'];
   },
 
   // --- ANALYSIS MANAGEMENT ---
@@ -564,18 +610,18 @@ export const StorageService = {
   },
 
   getAllAnalyses: (): { matchId: string, analysis: AnalysisResult }[] => {
-      const results: { matchId: string, analysis: AnalysisResult }[] = [];
-      Object.keys(localStorage).forEach(key => {
-          if (key.startsWith('analysis_')) {
-              try {
-                  const data = JSON.parse(localStorage.getItem(key) || '{}');
-                  results.push({ matchId: key.replace('analysis_', ''), analysis: data });
-              } catch (e) {
-                  console.error("Failed to parse analysis", key);
-              }
-          }
-      });
-      return results.sort((a,b) => b.analysis.timestamp - a.analysis.timestamp);
+    const results: { matchId: string, analysis: AnalysisResult }[] = [];
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('analysis_')) {
+        try {
+          const data = JSON.parse(localStorage.getItem(key) || '{}');
+          results.push({ matchId: key.replace('analysis_', ''), analysis: data });
+        } catch (e) {
+          console.error("Failed to parse analysis", key);
+        }
+      }
+    });
+    return results.sort((a, b) => b.analysis.timestamp - a.analysis.timestamp);
   },
 
   saveAnalysis: (matchId: string, analysis: any) => {
@@ -587,38 +633,38 @@ export const StorageService = {
 
   // NEW: Save Feedback for Archive
   updateAnalysisFeedback: (matchId: string, result: 'WIN' | 'LOSS' | 'VOID', score: string, scorers: string) => {
-      const existing = localStorage.getItem(`analysis_${matchId}`);
-      if (existing) {
-          const data = JSON.parse(existing);
-          data.result = result;
-          data.final_score = score;
-          data.final_scorers = scorers;
-          data.user_feedback_timestamp = Date.now();
-          localStorage.setItem(`analysis_${matchId}`, JSON.stringify(data));
-      }
+    const existing = localStorage.getItem(`analysis_${matchId}`);
+    if (existing) {
+      const data = JSON.parse(existing);
+      data.result = result;
+      data.final_score = score;
+      data.final_scorers = scorers;
+      data.user_feedback_timestamp = Date.now();
+      localStorage.setItem(`analysis_${matchId}`, JSON.stringify(data));
+    }
   },
 
   // NEW: Generate Learning Context for AI
   getLearningContext: (): string => {
-      const all = StorageService.getAllAnalyses();
-      const rated = all.filter(a => a.analysis.result); // Solo quelli con feedback utente
-      
-      if (rated.length === 0) return "Nessuno storico disponibile.";
+    const all = StorageService.getAllAnalyses();
+    const rated = all.filter(a => a.analysis.result); // Solo quelli con feedback utente
 
-      // Riassumi ultimi 10 risultati
-      const recent = rated.slice(0, 10).map(item => {
-          const mName = item.matchId.replace(/-[0-9]{4}.*/, '').replace(/-/g, ' ').toUpperCase();
-          const bet = item.analysis.recommended_bet;
-          const res = item.analysis.result;
-          return `- Match: ${mName}. Bet: ${bet}. Esito: ${res}.`;
-      }).join('\n');
+    if (rated.length === 0) return "Nessuno storico disponibile.";
 
-      // Calcola stats rapide
-      const wins = rated.filter(a => a.analysis.result === 'WIN').length;
-      const losses = rated.filter(a => a.analysis.result === 'LOSS').length;
-      const accuracy = (wins / (wins + losses || 1) * 100).toFixed(0);
+    // Riassumi ultimi 10 risultati
+    const recent = rated.slice(0, 10).map(item => {
+      const mName = item.matchId.replace(/-[0-9]{4}.*/, '').replace(/-/g, ' ').toUpperCase();
+      const bet = item.analysis.recommended_bet;
+      const res = item.analysis.result;
+      return `- Match: ${mName}. Bet: ${bet}. Esito: ${res}.`;
+    }).join('\n');
 
-      return `TUA ACCURATEZZA STORICA: ${accuracy}% su ${wins+losses} match valutati.\nRECENTI:\n${recent}\n\nIMPARA DA QUESTI ERRORI/SUCCESSI.`;
+    // Calcola stats rapide
+    const wins = rated.filter(a => a.analysis.result === 'WIN').length;
+    const losses = rated.filter(a => a.analysis.result === 'LOSS').length;
+    const accuracy = (wins / (wins + losses || 1) * 100).toFixed(0);
+
+    return `TUA ACCURATEZZA STORICA: ${accuracy}% su ${wins + losses} match valutati.\nRECENTI:\n${recent}\n\nIMPARA DA QUESTI ERRORI/SUCCESSI.`;
   },
 
   deleteAnalysis: (matchId: string) => {
@@ -627,16 +673,16 @@ export const StorageService = {
 
   clearAllAnalyses: () => {
     Object.keys(localStorage).forEach(key => {
-        if (key.startsWith('analysis_')) {
-            localStorage.removeItem(key);
-        }
+      if (key.startsWith('analysis_')) {
+        localStorage.removeItem(key);
+      }
     });
   },
 
   saveBet: (bet: Omit<BetRecord, 'id' | 'profit' | 'result'>) => {
     const existingData = localStorage.getItem(KEYS.BETS);
     const stats: UserStats = existingData ? JSON.parse(existingData) : { totalWagered: 0, netProfit: 0, bets: [] };
-    
+
     const newBet: BetRecord = {
       ...bet,
       id: Date.now(),
@@ -646,7 +692,7 @@ export const StorageService = {
 
     stats.bets.unshift(newBet);
     stats.totalWagered += Number(bet.stake);
-    
+
     localStorage.setItem(KEYS.BETS, JSON.stringify(stats));
     return stats;
   },
@@ -660,18 +706,18 @@ export const StorageService = {
       return { totalWagered: 0, netProfit: 0, bets: [] };
     }
   },
-  
+
   updateBetStatus: (betId: number, result: 'WIN' | 'LOSS') => {
     const existingData = localStorage.getItem(KEYS.BETS);
     if (!existingData) return;
-    
+
     const stats: UserStats = JSON.parse(existingData);
     const betIndex = stats.bets.findIndex(b => b.id === betId);
-    
+
     if (betIndex !== -1 && stats.bets[betIndex].result === 'PENDING') {
       const bet = stats.bets[betIndex];
       bet.result = result;
-      
+
       if (result === 'WIN') {
         bet.profit = (bet.stake * bet.totalOdds) - bet.stake;
         stats.netProfit += bet.profit;
@@ -679,7 +725,7 @@ export const StorageService = {
         bet.profit = -bet.stake;
         stats.netProfit -= bet.stake;
       }
-      
+
       localStorage.setItem(KEYS.BETS, JSON.stringify(stats));
     }
     return stats;
@@ -688,26 +734,26 @@ export const StorageService = {
   deleteBet: (betId: number) => {
     const existingData = localStorage.getItem(KEYS.BETS);
     if (!existingData) return;
-    
+
     const stats: UserStats = JSON.parse(existingData);
     const updatedBets = stats.bets.filter(b => b.id !== betId);
-    
+
     let newTotalWagered = 0;
     let newNetProfit = 0;
-    
+
     updatedBets.forEach(b => {
-        newTotalWagered += b.stake;
-        if (b.result === 'WIN') newNetProfit += b.profit;
-        if (b.result === 'LOSS') newNetProfit -= b.stake;
+      newTotalWagered += b.stake;
+      if (b.result === 'WIN') newNetProfit += b.profit;
+      if (b.result === 'LOSS') newNetProfit -= b.stake;
     });
 
     const newStats = {
-        ...stats,
-        bets: updatedBets,
-        totalWagered: newTotalWagered,
-        netProfit: newNetProfit
+      ...stats,
+      bets: updatedBets,
+      totalWagered: newTotalWagered,
+      netProfit: newNetProfit
     };
-    
+
     localStorage.setItem(KEYS.BETS, JSON.stringify(newStats));
     return newStats;
   },
@@ -760,7 +806,7 @@ export const StorageService = {
   restoreBackup: (jsonString: string): boolean => {
     try {
       const backup = JSON.parse(jsonString);
-      
+
       if (backup.meta?.app !== 'RedZoneBet') throw new Error("File non valido");
 
       localStorage.clear();
@@ -785,9 +831,9 @@ export const StorageService = {
         if (backup.footballData.openingOdds) localStorage.setItem(KEYS.OPENING_ODDS, JSON.stringify(backup.footballData.openingOdds));
         if (backup.footballData.upcomingMatches) localStorage.setItem(KEYS.UPCOMING_MATCHES, JSON.stringify(backup.footballData.upcomingMatches));
       }
-      
+
       if (backup.newsCache) {
-          localStorage.setItem(KEYS.CACHED_NEWS, JSON.stringify(backup.newsCache));
+        localStorage.setItem(KEYS.CACHED_NEWS, JSON.stringify(backup.newsCache));
       }
 
       if (backup.cache) {
@@ -795,7 +841,7 @@ export const StorageService = {
           localStorage.setItem(key, JSON.stringify(backup.cache[key]));
         });
       }
-      
+
       localStorage.setItem(KEYS.LAST_BACKUP_DATE, new Date().toISOString());
 
       return true;

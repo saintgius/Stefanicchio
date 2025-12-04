@@ -7,7 +7,7 @@ import { StorageService } from '../services/storage';
 import { NewsService, NewsArticle } from '../services/news';
 import { SyncService } from '../services/sync-service';
 import { ProcessedMatch } from '../types';
-import { RefreshCw, AlertTriangle, CalendarDays, Settings as SettingsIcon, DownloadCloud, BarChart3, Megaphone, Trophy, Shield, Crown, Trash2, Quote, TowerControl, Star } from 'lucide-react';
+import { RefreshCw, AlertTriangle, CalendarDays, Settings as SettingsIcon, DownloadCloud, BarChart3, Megaphone, Trophy, Shield, Crown, Trash2, Quote, TowerControl, Star, Flame } from 'lucide-react';
 import { Button } from '../components/Button';
 import { LeagueStatsModal } from '../components/LeagueStatsModal';
 import { TheLock } from '../components/TheLock';
@@ -23,7 +23,7 @@ interface DashboardProps {
     onAddToSlip: (match: string, selection: string, odds: number) => void;
 }
 
-type LeagueCode = 'SA' | 'CL' | 'PL';
+type LeagueCode = 'SA' | 'CL' | 'PL' | 'LL';
 
 // STEFANICCHIO'S MOTIVATION DATABASE
 const MOTIVATION_DB = {
@@ -125,6 +125,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
                 footballDataKey: 'PL',
                 label: 'Premier League',
                 newsTopic: 'Premier League'
+            };
+        } else if (league === 'LL') {
+            return {
+                oddsKey: 'soccer_spain_la_liga',
+                footballDataKey: 'PD',
+                label: 'La Liga',
+                newsTopic: 'La Liga'
             };
         }
         return {
@@ -309,7 +316,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
             {/* League Tabs - Premium */}
             <div className="glass-panel p-1.5 rounded-2xl">
                 <div className="flex gap-1">
-                    {(['SA', 'PL', 'CL'] as LeagueCode[]).map(code => {
+                    {(['SA', 'PL', 'CL', 'LL'] as LeagueCode[]).map(code => {
                         const isActive = activeLeague === code;
                         let activeClass = '';
                         let icon = null;
@@ -320,6 +327,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
                         } else if (code === 'PL') {
                             activeClass = isActive ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-[0_0_15px_rgba(147,51,234,0.4)]' : '';
                             icon = <TowerControl size={12} />;
+                        } else if (code === 'LL') {
+                            activeClass = isActive ? 'bg-gradient-to-r from-orange-600 to-red-600 text-white shadow-[0_0_15px_rgba(234,88,12,0.4)]' : '';
+                            icon = <Flame size={12} />;
                         } else {
                             activeClass = isActive ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-glow-red' : '';
                             icon = <Shield size={12} />;
@@ -336,7 +346,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
                               `}
                             >
                                 {icon}
-                                {code === 'SA' ? 'Serie A' : code === 'PL' ? 'Premier' : 'Champions'}
+                                {code === 'SA' ? 'Serie A' : code === 'PL' ? 'Premier' : code === 'LL' ? 'La Liga' : 'Champions'}
                             </button>
                         );
                     })}

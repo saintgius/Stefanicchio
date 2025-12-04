@@ -74,7 +74,8 @@ interface ValueEdge {
 const LEAGUE_AVERAGES = {
   SA: { homeGoals: 1.45, awayGoals: 1.15, totalGoals: 2.6 },
   PL: { homeGoals: 1.55, awayGoals: 1.25, totalGoals: 2.8 },
-  CL: { homeGoals: 1.50, awayGoals: 1.20, totalGoals: 2.7 }
+  CL: { homeGoals: 1.50, awayGoals: 1.20, totalGoals: 2.7 },
+  LL: { homeGoals: 1.40, awayGoals: 1.10, totalGoals: 2.5 } // La Liga
 };
 
 // Form weight decay (most recent = highest weight)

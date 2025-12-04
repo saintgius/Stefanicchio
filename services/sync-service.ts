@@ -99,11 +99,37 @@ export const SyncService = {
         const standingsCL_Tagged = standingsCL.map(s => ({ ...s, league: 'CL' as const }));
         const scorersCL_Tagged = scorersCL.map(s => ({ ...s, league: 'CL' as const }));
 
-        // 4. MERGE DATA
-        const mergedStandings = [...standingsSA_Tagged, ...standingsPL_Tagged, ...standingsCL_Tagged];
-        const mergedMatches = [...matchesSA, ...matchesPL, ...matchesCL];
-        const mergedScorers = [...scorersSA_Tagged, ...scorersPL_Tagged, ...scorersCL_Tagged];
-        const mergedSquads = [...squadsSA, ...squadsPL, ...squadsCL];
+        // 4. SYNC LA LIGA (PD = Primera División)
+        log('LL: Classifica...');
+        let standingsLL: any[] = [], matchesLL: any[] = [], scorersLL: any[] = [], squadsLL: any[] = [];
+
+        try {
+            standingsLL = await FootballDataService.fetchStandings(footballKey, 'PD');
+            await wait(1500);
+
+            log('LL: Partite...');
+            matchesLL = await FootballDataService.fetchSeasonMatches(footballKey, 'PD');
+            await wait(1500);
+
+            log('LL: Marcatori...');
+            scorersLL = await FootballDataService.fetchTopScorers(footballKey, 'PD');
+            await wait(1500);
+
+            log('LL: Rose...');
+            squadsLL = await FootballDataService.fetchTeams(footballKey, 'PD');
+        } catch (e) {
+            console.warn("La Liga sync partial fail", e);
+        }
+
+        // TAG LL DATA
+        const standingsLL_Tagged = standingsLL.map(s => ({ ...s, league: 'LL' as const }));
+        const scorersLL_Tagged = scorersLL.map(s => ({ ...s, league: 'LL' as const }));
+
+        // 5. MERGE DATA
+        const mergedStandings = [...standingsSA_Tagged, ...standingsPL_Tagged, ...standingsCL_Tagged, ...standingsLL_Tagged];
+        const mergedMatches = [...matchesSA, ...matchesPL, ...matchesCL, ...matchesLL];
+        const mergedScorers = [...scorersSA_Tagged, ...scorersPL_Tagged, ...scorersCL_Tagged, ...scorersLL_Tagged];
+        const mergedSquads = [...squadsSA, ...squadsPL, ...squadsCL, ...squadsLL];
 
         StorageService.saveFootballData(mergedStandings, mergedMatches, mergedScorers, mergedSquads);
         log('Sincronizzazione completata!');
