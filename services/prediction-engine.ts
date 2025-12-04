@@ -267,7 +267,7 @@ export const PredictionEngine = {
    */
   generatePrediction: (
     match: ProcessedMatch,
-    league: 'SA' | 'PL' | 'CL' = 'SA'
+    league: 'SA' | 'PL' | 'CL' | 'LL' = 'SA'
   ): PredictionResult => {
     const standings = StorageService.getStandings();
     const leagueAvg = LEAGUE_AVERAGES[league];
