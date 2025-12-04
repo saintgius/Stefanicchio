@@ -4,6 +4,7 @@ import { AnalysisResult, ProcessedMatch, RiskLevel, FootballDataMatch, WeatherDa
 import { StorageService } from '../services/storage';
 import { PredictionEngine } from '../services/prediction-engine';
 import { ConfidenceMeter } from './ConfidenceMeter';
+import { H2HVisualizer } from './H2HVisualizer';
 import { X, TrendingUp, AlertOctagon, ShieldAlert, BrainCircuit, History, Zap, Swords, Percent, DollarSign, BarChart3, FileText, CloudRain, Wind, Sun, Cloud, CloudSnow, Thermometer, Crown, Ambulance, Megaphone, UserCog, Target, Crosshair, Layers, Timer, AlertTriangle, Gavel, Scale, Trash2, Layout, Gem, TrendingDown, Activity, PieChart as PieChartIcon } from 'lucide-react';
 import { Button } from './Button';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, RadialBarChart, RadialBar } from 'recharts';
@@ -19,7 +20,7 @@ interface MatchAnalysisOverlayProps {
 }
 
 export const MatchAnalysisOverlay: React.FC<MatchAnalysisOverlayProps> = ({ match, analysis, onClose, onDelete, onAddToSlip, weather, league = 'SA' }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'stats' | 'advanced'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'stats' | 'h2h' | 'advanced'>('overview');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [prediction, setPrediction] = useState<any>(null);
 
@@ -151,6 +152,7 @@ export const MatchAnalysisOverlay: React.FC<MatchAnalysisOverlayProps> = ({ matc
         {[
           { id: 'overview', label: 'Analisi', icon: BrainCircuit },
           { id: 'stats', label: 'Stats', icon: BarChart3 },
+          { id: 'h2h', label: 'H2H', icon: Swords },
           { id: 'advanced', label: 'Picks', icon: Target }
         ].map((tab) => (
           <button
@@ -405,6 +407,13 @@ export const MatchAnalysisOverlay: React.FC<MatchAnalysisOverlayProps> = ({ matc
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {/* TAB: H2H */}
+        {activeTab === 'h2h' && (
+          <div className="space-y-5 animate-slide-up">
+            <H2HVisualizer homeTeam={match.homeTeam} awayTeam={match.awayTeam} />
           </div>
         )}
 
