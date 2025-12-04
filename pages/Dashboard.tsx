@@ -11,6 +11,9 @@ import { RefreshCw, AlertTriangle, CalendarDays, Settings as SettingsIcon, Downl
 import { Button } from '../components/Button';
 import { LeagueStatsModal } from '../components/LeagueStatsModal';
 import { TheLock } from '../components/TheLock';
+import { AIInsightsPanel } from '../components/AIInsightsPanel';
+import { SkeletonList } from '../components/SkeletonCard';
+import { BankrollTracker } from '../components/BankrollTracker';
 
 interface DashboardProps {
     oddsKey: string | null;
@@ -353,9 +356,25 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
                 </div>
             )}
 
+            {/* BANKROLL TRACKER - Compact */}
+            <BankrollTracker compact />
+
             {/* THE LOCK (Safe Bet) */}
             {matches.length > 0 && (
                 <TheLock matches={matches} onAddToSlip={onAddToSlip} />
+            )}
+
+            {/* AI INSIGHTS PANEL */}
+            {matches.length > 0 && (
+                <AIInsightsPanel
+                    matches={matches}
+                    league={activeLeague}
+                    onSelectMatch={(id) => {
+                        // Scroll to the match card
+                        const element = document.getElementById(`match-${id}`);
+                        element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }}
+                />
             )}
 
             {/* NEWS TICKER */}
@@ -396,10 +415,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
             {/* MATCH LIST */}
             <div className="space-y-4">
                 {loading ? (
-                    <div className="flex flex-col items-center justify-center py-20 gap-4">
-                        <RefreshCw className="animate-spin text-redzone-600" size={32} />
-                        <p className="text-neutral-500 text-xs animate-pulse">Analisi quote in corso...</p>
-                    </div>
+                    <SkeletonList count={3} variant="match" />
                 ) : error ? (
                     <div className="text-center py-20">
                         <AlertTriangle className="mx-auto text-red-500 mb-2" size={32} />
