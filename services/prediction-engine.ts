@@ -18,6 +18,20 @@ interface TeamStats {
   form: string[];
   avgGoalsScored: number;
   avgGoalsConceded: number;
+  // Home/Away splits
+  homeGoalsScored?: number;
+  homeGoalsConceded?: number;
+  awayGoalsScored?: number;
+  awayGoalsConceded?: number;
+  homeGames?: number;
+  awayGames?: number;
+}
+
+interface WhyPickReason {
+  factor: string;
+  impact: 'positive' | 'negative' | 'neutral';
+  weight: number; // 1-10
+  description: string;
 }
 
 interface PredictionResult {
@@ -29,13 +43,22 @@ interface PredictionResult {
   over15Prob: number;
   over25Prob: number;
   over35Prob: number;
-  bttsProb: number; // Both Teams To Score
+  bttsProb: number;
   mostLikelyScore: string;
   valueEdges: ValueEdge[];
   formScore: { home: number; away: number };
   strengthIndex: { home: number; away: number };
   confidenceBoost: number;
   analysis: string;
+  // NEW: Enhanced analysis fields
+  whyThisPick: WhyPickReason[];
+  confidenceLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'VERY_HIGH';
+  homeAwayAdvantage: {
+    homeAttackAtHome: number;
+    homeDefenseAtHome: number;
+    awayAttackAway: number;
+    awayDefenseAway: number;
+  };
 }
 
 interface ValueEdge {
@@ -91,8 +114,8 @@ export const PredictionEngine = {
     let underProb = 0;
     for (let h = 0; h <= threshold; h++) {
       for (let a = 0; a <= threshold - h; a++) {
-        underProb += PredictionEngine.poissonProbability(lambdaHome, h) * 
-                     PredictionEngine.poissonProbability(lambdaAway, a);
+        underProb += PredictionEngine.poissonProbability(lambdaHome, h) *
+          PredictionEngine.poissonProbability(lambdaAway, a);
       }
     }
     return 1 - underProb;
@@ -127,7 +150,7 @@ export const PredictionEngine = {
       if (result === 'W') points = 100;
       else if (result === 'D') points = 40;
       else if (result === 'L') points = 0;
-      
+
       weightedScore += points * weight;
       totalWeight += weight;
     });
@@ -141,22 +164,22 @@ export const PredictionEngine = {
   calculateStrengthIndex: (stats: TeamStats, totalTeams: number = 20): number => {
     // Position factor (1st = 100, last = 0)
     const positionScore = ((totalTeams - stats.position) / (totalTeams - 1)) * 100;
-    
+
     // Goal difference factor
     const gdPerGame = (stats.goalsFor - stats.goalsAgainst) / (stats.gamesPlayed || 1);
     const gdScore = Math.max(0, Math.min(100, 50 + (gdPerGame * 20)));
-    
+
     // Attack strength
     const attackScore = Math.min(100, (stats.avgGoalsScored / 2.5) * 100);
-    
+
     // Defense strength (lower = better)
     const defenseScore = Math.max(0, 100 - (stats.avgGoalsConceded / 2) * 50);
 
     // Weighted combination
     return Math.round(
-      (positionScore * 0.30) + 
-      (gdScore * 0.25) + 
-      (attackScore * 0.25) + 
+      (positionScore * 0.30) +
+      (gdScore * 0.25) +
+      (attackScore * 0.25) +
       (defenseScore * 0.20)
     );
   },
@@ -173,7 +196,7 @@ export const PredictionEngine = {
     const homeFactor = isHome ? 1.15 : 0.85;
     const attackFactor = attackStrength / 50; // Normalize around 1
     const defenseFactor = defenseWeakness / 50;
-    
+
     return leagueAvg * attackFactor * defenseFactor * homeFactor;
   },
 
@@ -189,7 +212,7 @@ export const PredictionEngine = {
     odds: { home: number; draw: number; away: number }
   ): ValueEdge[] => {
     const edges: ValueEdge[] = [];
-    
+
     const markets = [
       { name: '1 (Casa)', calculated: calculatedProbs.home, odd: odds.home },
       { name: 'X (Pareggio)', calculated: calculatedProbs.draw, odd: odds.draw },
@@ -199,7 +222,7 @@ export const PredictionEngine = {
     markets.forEach(m => {
       const impliedProb = 1 / m.odd;
       const edge = (m.calculated - impliedProb) * 100;
-      
+
       edges.push({
         market: m.name,
         calculatedProb: Math.round(m.calculated * 100),
@@ -222,11 +245,11 @@ export const PredictionEngine = {
    */
   calculateScoreMatrix: (lambdaHome: number, lambdaAway: number, topN: number = 5): { score: string; prob: number }[] => {
     const scores: { score: string; prob: number }[] = [];
-    
+
     for (let h = 0; h <= 5; h++) {
       for (let a = 0; a <= 5; a++) {
-        const prob = PredictionEngine.poissonProbability(lambdaHome, h) * 
-                     PredictionEngine.poissonProbability(lambdaAway, a);
+        const prob = PredictionEngine.poissonProbability(lambdaHome, h) *
+          PredictionEngine.poissonProbability(lambdaAway, a);
         scores.push({ score: `${h}-${a}`, prob });
       }
     }
@@ -249,12 +272,12 @@ export const PredictionEngine = {
     const leagueAvg = LEAGUE_AVERAGES[league];
 
     // Get team stats from standings
-    const homeStanding = standings.find(s => 
+    const homeStanding = standings.find(s =>
       s.team.name.toLowerCase().includes(match.homeTeam.toLowerCase().split(' ')[0]) ||
       match.homeTeam.toLowerCase().includes(s.team.name.toLowerCase().split(' ')[0])
     );
-    
-    const awayStanding = standings.find(s => 
+
+    const awayStanding = standings.find(s =>
       s.team.name.toLowerCase().includes(match.awayTeam.toLowerCase().split(' ')[0]) ||
       match.awayTeam.toLowerCase().includes(s.team.name.toLowerCase().split(' ')[0])
     );
@@ -346,8 +369,8 @@ export const PredictionEngine = {
 
     for (let h = 0; h <= 10; h++) {
       for (let a = 0; a <= 10; a++) {
-        const prob = PredictionEngine.poissonProbability(clampedLambdaHome, h) * 
-                     PredictionEngine.poissonProbability(clampedLambdaAway, a);
+        const prob = PredictionEngine.poissonProbability(clampedLambdaHome, h) *
+          PredictionEngine.poissonProbability(clampedLambdaAway, a);
         if (h > a) homeWinProb += prob;
         else if (h === a) drawProb += prob;
         else awayWinProb += prob;
@@ -389,9 +412,99 @@ export const PredictionEngine = {
     // Generate analysis text
     const bestValue = valueEdges.find(e => e.isValue);
     const analysis = PredictionEngine.generateAnalysisText(
-      homeStats, awayStats, homeForm, awayForm, 
+      homeStats, awayStats, homeForm, awayForm,
       clampedLambdaHome, clampedLambdaAway, bestValue
     );
+
+    // NEW: Generate "Why This Pick" reasons
+    const whyThisPick: WhyPickReason[] = [];
+
+    // Form factor
+    if (homeForm > awayForm + 15) {
+      whyThisPick.push({
+        factor: 'Forma Casa',
+        impact: 'positive',
+        weight: 8,
+        description: `${match.homeTeam} in forma superiore (${homeForm}% vs ${awayForm}%)`
+      });
+    } else if (awayForm > homeForm + 15) {
+      whyThisPick.push({
+        factor: 'Forma Ospite',
+        impact: 'positive',
+        weight: 8,
+        description: `${match.awayTeam} in forma superiore (${awayForm}% vs ${homeForm}%)`
+      });
+    }
+
+    // Position factor
+    if (homeStats.position < awayStats.position - 5) {
+      whyThisPick.push({
+        factor: 'Classifica',
+        impact: 'positive',
+        weight: 7,
+        description: `${match.homeTeam} ${homeStats.position}° vs ${match.awayTeam} ${awayStats.position}°`
+      });
+    } else if (awayStats.position < homeStats.position - 5) {
+      whyThisPick.push({
+        factor: 'Classifica',
+        impact: 'negative',
+        weight: 7,
+        description: `Ospite superiore in classifica (${awayStats.position}° vs ${homeStats.position}°)`
+      });
+    }
+
+    // Home advantage factor
+    if (homeStrength > awayStrength + 10) {
+      whyThisPick.push({
+        factor: 'Fattore Casa',
+        impact: 'positive',
+        weight: 6,
+        description: `Forza casa: ${homeStrength}/100 vs trasferta: ${awayStrength}/100`
+      });
+    }
+
+    // Expected goals factor
+    const totalXG = clampedLambdaHome + clampedLambdaAway;
+    if (totalXG > 3) {
+      whyThisPick.push({
+        factor: 'Alto xG',
+        impact: 'positive',
+        weight: 6,
+        description: `Expected Goals totale: ${totalXG.toFixed(1)} → Over probabile`
+      });
+    } else if (totalXG < 2) {
+      whyThisPick.push({
+        factor: 'Basso xG',
+        impact: 'neutral',
+        weight: 5,
+        description: `Expected Goals totale: ${totalXG.toFixed(1)} → Under probabile`
+      });
+    }
+
+    // Value edge factor
+    if (bestValue && bestValue.edge > 5) {
+      whyThisPick.push({
+        factor: 'Value Bet',
+        impact: 'positive',
+        weight: 9,
+        description: `${bestValue.market} con edge ${bestValue.edge.toFixed(1)}% (${bestValue.rating})`
+      });
+    }
+
+    // NEW: Calculate confidence level
+    let confidenceLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'VERY_HIGH' = 'MEDIUM';
+    if (confidenceBoost >= 30) confidenceLevel = 'VERY_HIGH';
+    else if (confidenceBoost >= 20) confidenceLevel = 'HIGH';
+    else if (confidenceBoost >= 10) confidenceLevel = 'MEDIUM';
+    else confidenceLevel = 'LOW';
+
+    // NEW: Home/Away advantage stats
+    const homeAwayAdvantage = {
+      homeAttackAtHome: homeStats.homeGoalsScored ?? homeStats.avgGoalsScored * 1.15,
+      homeDefenseAtHome: homeStats.homeGoalsConceded ?? homeStats.avgGoalsConceded * 0.9,
+      awayAttackAway: awayStats.awayGoalsScored ?? awayStats.avgGoalsScored * 0.85,
+      awayDefenseAway: awayStats.awayGoalsConceded ?? awayStats.avgGoalsConceded * 1.1,
+    };
 
     return {
       homeWinProb: Math.round(homeWinProb * 100),
@@ -408,7 +521,10 @@ export const PredictionEngine = {
       formScore: { home: homeForm, away: awayForm },
       strengthIndex: { home: homeStrength, away: awayStrength },
       confidenceBoost,
-      analysis
+      analysis,
+      whyThisPick,
+      confidenceLevel,
+      homeAwayAdvantage
     };
   },
 
@@ -461,7 +577,7 @@ export const PredictionEngine = {
    */
   generateEnhancedContext: (match: ProcessedMatch, league: 'SA' | 'PL' | 'CL' = 'SA'): string => {
     const prediction = PredictionEngine.generatePrediction(match, league);
-    
+
     return `
 === ANALISI MATEMATICA AVANZATA (PREDICTION ENGINE v2.0) ===
 
@@ -492,9 +608,9 @@ INDICE DI FORZA:
 • ${match.awayTeam}: ${prediction.strengthIndex.away}/100
 
 VALUE BETTING ANALYSIS:
-${prediction.valueEdges.map(e => 
-  `• ${e.market}: Prob Calcolata ${e.calculatedProb}% vs Implicita ${e.impliedProb}% → Edge: ${e.edge > 0 ? '+' : ''}${e.edge}% ${e.isValue ? '🔥 VALUE!' : ''}`
-).join('\n')}
+${prediction.valueEdges.map(e =>
+      `• ${e.market}: Prob Calcolata ${e.calculatedProb}% vs Implicita ${e.impliedProb}% → Edge: ${e.edge > 0 ? '+' : ''}${e.edge}% ${e.isValue ? '🔥 VALUE!' : ''}`
+    ).join('\n')}
 
 NOTA AI: Usa questi dati matematici come BASE per il tuo reasoning. 
 Se i calcoli indicano un edge significativo (>5%), enfatizzalo nel consiglio.

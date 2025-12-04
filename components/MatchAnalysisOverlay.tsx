@@ -5,6 +5,7 @@ import { StorageService } from '../services/storage';
 import { PredictionEngine } from '../services/prediction-engine';
 import { ConfidenceMeter } from './ConfidenceMeter';
 import { H2HVisualizer } from './H2HVisualizer';
+import { WhyThisPick } from './WhyThisPick';
 import { X, TrendingUp, AlertOctagon, ShieldAlert, BrainCircuit, History, Zap, Swords, Percent, DollarSign, BarChart3, FileText, CloudRain, Wind, Sun, Cloud, CloudSnow, Thermometer, Crown, Ambulance, Megaphone, UserCog, Target, Crosshair, Layers, Timer, AlertTriangle, Gavel, Scale, Trash2, Layout, Gem, TrendingDown, Activity, PieChart as PieChartIcon } from 'lucide-react';
 import { Button } from './Button';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, RadialBarChart, RadialBar } from 'recharts';
@@ -426,6 +427,14 @@ export const MatchAnalysisOverlay: React.FC<MatchAnalysisOverlayProps> = ({ matc
               <span className="text-[10px] font-bold uppercase text-neutral-500 mb-4 tracking-widest">AI Confidence Score</span>
               <ConfidenceMeter value={analysis.confidence_score} size="lg" />
             </div>
+
+            {/* Why This Pick - AI Explainer */}
+            {prediction?.whyThisPick && prediction.whyThisPick.length > 0 && (
+              <WhyThisPick
+                reasons={prediction.whyThisPick}
+                recommendedBet={analysis.recommended_bet}
+              />
+            )}
 
             {/* Stefanicchio's Arsenal */}
             <div className="glass-card p-5 rounded-xl relative overflow-hidden">
