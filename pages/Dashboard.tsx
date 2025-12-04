@@ -106,9 +106,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ oddsKey, geminiKey, footba
     // THEME COLORS HELPERS
     const isChampions = activeLeague === 'CL';
     const isPremier = activeLeague === 'PL';
+    const isLaLiga = activeLeague === 'LL';
 
-    const themeText = isChampions ? 'text-blue-500' : isPremier ? 'text-purple-500' : 'text-redzone-500';
-    const themeBg = isChampions ? 'bg-blue-600' : isPremier ? 'bg-purple-600' : 'bg-redzone-600';
+    const themeText = isChampions ? 'text-blue-500' : isPremier ? 'text-purple-500' : isLaLiga ? 'text-orange-500' : 'text-redzone-500';
+    const themeBg = isChampions ? 'bg-blue-600' : isPremier ? 'bg-purple-600' : isLaLiga ? 'bg-orange-600' : 'bg-redzone-600';
 
     // Helper to get codes based on active league
     const getLeagueConfig = (league: LeagueCode) => {

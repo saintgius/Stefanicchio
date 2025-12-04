@@ -29,12 +29,13 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, geminiKey, league =
 
   const isChampions = league === 'CL';
   const isPremier = league === 'PL';
+  const isLaLiga = league === 'LL';
 
-  // Theme classes
-  const themeAccent = isChampions ? 'blue' : isPremier ? 'purple' : 'red';
-  const themeBg = isChampions ? 'from-blue-900/20 to-blue-950/10' : isPremier ? 'from-purple-900/20 to-purple-950/10' : 'from-red-900/20 to-red-950/10';
-  const themeBorder = isChampions ? 'border-blue-500/30' : isPremier ? 'border-purple-500/30' : 'border-red-500/30';
-  const themeGlow = isChampions ? 'shadow-glow-blue' : isPremier ? 'shadow-[0_0_20px_rgba(147,51,234,0.3)]' : 'shadow-glow-red';
+  // Theme classes - now with La Liga orange
+  const themeAccent = isChampions ? 'blue' : isPremier ? 'purple' : isLaLiga ? 'orange' : 'red';
+  const themeBg = isChampions ? 'from-blue-900/20 to-blue-950/10' : isPremier ? 'from-purple-900/20 to-purple-950/10' : isLaLiga ? 'from-orange-900/20 to-red-950/10' : 'from-red-900/20 to-red-950/10';
+  const themeBorder = isChampions ? 'border-blue-500/30' : isPremier ? 'border-purple-500/30' : isLaLiga ? 'border-orange-500/30' : 'border-red-500/30';
+  const themeGlow = isChampions ? 'shadow-glow-blue' : isPremier ? 'shadow-[0_0_20px_rgba(147,51,234,0.3)]' : isLaLiga ? 'shadow-[0_0_20px_rgba(249,115,22,0.3)]' : 'shadow-glow-red';
 
   // Oracle State
   const [showOracle, setShowOracle] = useState(false);
@@ -216,10 +217,12 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, geminiKey, league =
                 text-[10px] font-bold px-2 py-1 rounded-lg flex items-center gap-1
                 ${isChampions ? 'bg-blue-900/50 text-blue-400 border border-blue-800/50' :
                   isPremier ? 'bg-purple-900/50 text-purple-400 border border-purple-800/50' :
-                    'bg-neutral-800/80 text-neutral-400 border border-neutral-700/50'}
+                    isLaLiga ? 'bg-orange-900/50 text-orange-400 border border-orange-800/50' :
+                      'bg-neutral-800/80 text-neutral-400 border border-neutral-700/50'}
               `}>
                 {isChampions ? <><Star size={10} fill="currentColor" /> UCL</> :
-                  isPremier ? <><TowerControl size={10} /> PL</> : 'SERIE A'}
+                  isPremier ? <><TowerControl size={10} /> PL</> :
+                    isLaLiga ? <><Flame size={10} /> LIGA</> : 'SERIE A'}
               </span>
               <span className="text-xs text-neutral-500 font-mono bg-neutral-900/50 px-2 py-0.5 rounded">
                 {new Date(match.startTime).toLocaleString('it-IT', {
@@ -361,7 +364,8 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, geminiKey, league =
                 w-full btn-premium py-3 rounded-xl font-bold text-sm tracking-wide
                 ${isChampions ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 shadow-glow-blue' :
                   isPremier ? 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 shadow-[0_0_20px_rgba(147,51,234,0.4)]' :
-                    'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 shadow-glow-red'}
+                    isLaLiga ? 'bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 shadow-[0_0_20px_rgba(249,115,22,0.4)]' :
+                      'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 shadow-glow-red'}
                 border-none
               `}
               variant="primary"

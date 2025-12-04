@@ -35,10 +35,11 @@ export const MatchAnalysisOverlay: React.FC<MatchAnalysisOverlayProps> = ({ matc
 
   const isChampions = league === 'CL';
   const isPremier = league === 'PL';
+  const isLaLiga = league === 'LL';
 
-  // Theme colors
-  const themeAccent = isChampions ? 'blue' : isPremier ? 'purple' : 'red';
-  const themeBg = isChampions ? 'from-blue-600 to-blue-800' : isPremier ? 'from-purple-600 to-purple-800' : 'from-red-600 to-red-800';
+  // Theme colors - now with La Liga orange
+  const themeAccent = isChampions ? 'blue' : isPremier ? 'purple' : isLaLiga ? 'orange' : 'red';
+  const themeBg = isChampions ? 'from-blue-600 to-blue-800' : isPremier ? 'from-purple-600 to-purple-800' : isLaLiga ? 'from-orange-600 to-red-700' : 'from-red-600 to-red-800';
 
   useEffect(() => {
     setHomeAdvancedForm(StorageService.getAdvancedForm(match.homeTeam));
