@@ -13,7 +13,7 @@ import { OracleOverlay } from './OracleOverlay';
 interface MatchCardProps {
   match: ProcessedMatch;
   geminiKey: string | null;
-  league?: 'SA' | 'CL' | 'PL';
+  league?: 'SA' | 'CL' | 'PL' | 'LL';
   onDeleteAnalysis?: () => void;
   onAddToSlip?: (match: string, selection: string, odds: number) => void;
   dropPercentage?: number;
