@@ -105,20 +105,25 @@ export const SyncService = {
 
         try {
             standingsLL = await FootballDataService.fetchStandings(footballKey, 'PD');
+            log(`LL: Classifica OK (${standingsLL.length} squadre)`);
             await wait(1500);
 
             log('LL: Partite...');
             matchesLL = await FootballDataService.fetchSeasonMatches(footballKey, 'PD');
+            log(`LL: Partite OK (${matchesLL.length} partite)`);
             await wait(1500);
 
             log('LL: Marcatori...');
             scorersLL = await FootballDataService.fetchTopScorers(footballKey, 'PD');
+            log(`LL: Marcatori OK (${scorersLL.length} giocatori)`);
             await wait(1500);
 
             log('LL: Rose...');
             squadsLL = await FootballDataService.fetchTeams(footballKey, 'PD');
-        } catch (e) {
-            console.warn("La Liga sync partial fail", e);
+            log(`LL: Rose OK (${squadsLL.length} squadre)`);
+        } catch (e: any) {
+            console.error("La Liga sync failed:", e);
+            log(`LL: ERRORE - ${e.message || 'Errore sconosciuto'}`);
         }
 
         // TAG LL DATA
